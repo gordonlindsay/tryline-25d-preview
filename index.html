@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0b130e">
+<title>Try Line Rugby</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Big+Shoulders+Display:wght@700;800;900&display=swap">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="practice.css">
+</head>
+<body>
+
+<canvas id="cv" aria-label="Rugby pitch"></canvas>
+
+<div id="hud" hidden>
+  <div class="bugrow">
+    <i class="stag s0" id="h-t0" hidden>1</i>
+    <div class="bug">
+      <span class="k" id="h-k0"></span><span class="nm" id="h-n0">ENG</span><i class="heat" id="h-f0" hidden></i>
+      <span class="sc"><span id="h-s0">0</span><span>–</span><span id="h-s1">0</span></span>
+      <i class="heat" id="h-f1" hidden></i><span class="nm" id="h-n1">FRA</span><span class="k" id="h-k1"></span>
+    </div>
+    <i class="stag s1" id="h-t1" hidden>2</i>
+  </div>
+  <div class="sub" id="h-sub">00:00</div>
+</div>
+<button class="pause" id="b-pause" aria-label="Pause" hidden></button>
+<div class="hc" id="hc0" hidden><div class="hc-head"><div class="hc-tt"><b class="hc-title" id="hc0-t"></b><span class="hc-rule" id="hc0-r"></span></div><button class="hc-tick" id="ht0" aria-label="Hints Off"><i></i><span>Hints</span></button></div><div class="hc-rows" id="hc0-b"></div></div>
+<div class="hc s1" id="hc1" hidden><div class="hc-head"><div class="hc-tt"><b class="hc-title" id="hc1-t"></b><span class="hc-rule" id="hc1-r"></span></div><button class="hc-tick" id="ht1" aria-label="Hints Off"><i></i><span>Hints</span></button></div><div class="hc-rows" id="hc1-b"></div></div>
+<div id="banner" aria-live="polite"></div>
+<div id="rotate" role="alert"><div class="phone" aria-hidden="true"></div><h2>Turn Your Phone Sideways</h2></div>
+
+<div id="controls" hidden>
+  <div id="zone"></div>
+  <div id="plates" hidden><span>Step Left</span><span>Step Right</span></div>
+  <div id="stick"><div id="knob"></div></div>
+  <button class="act c" id="btnC"><span id="lc">Sprint</span><i class="hint kb">L</i><i class="hint pad sh"><b></b></i></button>
+  <button class="act b" id="btnB"><span id="lb">Kick</span><i class="hint kb">K</i><i class="hint pad"><b></b><b class="on"></b><b></b><b></b></i></button>
+  <button class="act a" id="btnA"><span id="la">Pass</span><i class="hint kb">J</i><i class="hint pad"><b></b><b></b><b class="on"></b><b></b></i></button>
+</div>
+
+<section class="screen" id="s-home">
+  <div class="wrap home">
+    <header class="mark">
+      <h1 class="word" aria-label="Try Line"><span class="try">Try</span><span class="line">Line<span class="posts"></span></span></h1>
+      <p class="eyebrow">Mobile Rugby · Sevens</p>
+    </header>
+    <div class="stack">
+      <button class="btn primary" id="b-quick" autofocus>Quick Match</button>
+      <div class="row2 home-row">
+        <div class="col">
+          <button class="btn" id="b-champ">Championship</button>
+          <p class="resume-note" id="champ-note" hidden></p>
+        </div>
+        <div class="col">
+          <button class="btn" id="b-career">Career</button>
+          <p class="resume-note" id="career-note" hidden></p>
+        </div>
+        <button class="btn desk-only" id="b-two">Two Player</button>
+      </div>
+      <div class="row2 learn-row">
+        <button class="btn" id="b-help">How to Play</button>
+        <button class="btn" id="b-practice">Training Ground</button>
+      </div>
+    </div>
+    <div class="app-tools" id="app-tools" hidden>
+      <span id="offline-status" role="status" hidden>Offline Ready</span>
+      <button class="app-action" id="b-install" hidden>Install Game</button>
+      <button class="app-action" id="b-update" hidden>Update Game</button>
+    </div>
+    <details class="cabinet home-cabinet" id="home-cabinet"><summary>Trophy Cabinet</summary><div id="home-history"></div></details>
+    <div class="settings">
+      <div class="set"><span class="lbl">Difficulty</span><div class="seg" data-key="diff"><button>Kids</button><button>Easy</button><button>Normal</button><button>Hard</button></div></div>
+      <div class="set"><span class="lbl">Sound</span><div class="seg" data-key="sound"><button>On</button><button>Off</button></div></div>
+      <div class="set"><span class="lbl">Match Help</span><div class="seg" data-key="hints" aria-label="Control hints and coach tips"><button>On</button><button>Off</button></div></div>
+      <div class="set more" id="set-more" hidden><span class="lbl">Half Length</span><div class="seg" data-key="half"><button>2 Min</button><button>4 Min</button><button>6 Min</button></div></div>
+      <div class="set more" id="set-cam" hidden><span class="lbl">Camera</span><div class="seg" data-key="cam"><button>Top</button><button>Low</button><button>Mid</button><button>High</button></div></div>
+      <button class="btn more-btn" id="b-more" aria-expanded="false">More Settings</button>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="s-teams" hidden>
+  <div class="wrap">
+    <div class="head"><div><p class="eyebrow" id="t-eyebrow">Championship</p><h2 class="title" id="t-title">Pick Your Team</h2></div>
+      <div class="seg pool" data-key="pool"><button>International</button><button>Local</button><button>France</button><button>Australia</button><button>South Africa</button><button id="t-league" hidden>My League</button></div></div>
+    <div class="yours" id="t-yours" hidden><span class="fx-team" id="t-mine"></span><button class="btn" id="t-change">Change Team</button></div>
+    <button class="btn primary" id="t-default" hidden></button>
+    <div class="teams" id="t-grid"></div>
+    <button class="btn" id="t-back" data-back>Back to Menu</button>
+  </div>
+</section>
+
+<section class="screen" id="s-build" hidden>
+  <div class="wrap">
+    <div class="head"><div><p class="eyebrow" id="bd-eyebrow">Create Team</p><h2 class="title" id="bd-title">My Team</h2></div>
+      <span class="preview" id="bd-jersey"></span></div>
+    <div class="bgrid">
+      <div class="panel">
+        <div class="names">
+          <label class="field"><span class="lbl">Name</span><input class="inp" id="bd-name" maxlength="16" placeholder="My Team" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="done"></label>
+          <label class="field"><span class="lbl">Short Name</span><input class="inp" id="bd-code" maxlength="3" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="done"></label>
+        </div>
+        <div class="field"><span class="lbl">Pattern</span><div class="seg" id="bd-pat"><button>Plain</button><button>Hoops</button></div></div>
+        <div class="field"><span class="lbl">Shirt</span><div class="swatches" id="bd-kit"></div></div>
+        <div class="field"><span class="lbl">Trim</span><div class="swatches" id="bd-trim"></div></div>
+      </div>
+      <div class="panel" id="bd-abs">
+        <div class="ptitle"><span class="lbl">Abilities</span><span class="left" id="bd-left"></span></div>
+      </div>
+    </div>
+    <button class="btn primary" id="bd-save">Save Team</button>
+    <div class="row2" id="bd-row"><button class="btn" id="bd-back" data-back>Back to Teams</button><button class="btn warn" id="bd-del">Delete Team</button></div>
+  </div>
+</section>
+
+<div class="modal" id="m-import" hidden>
+  <div class="card" role="dialog" aria-modal="true" aria-labelledby="im-title">
+    <div class="im-head">
+      <div><p class="eyebrow">Import Club</p><h3 id="im-title">Paste Your Link</h3><div class="im-league" id="im-league" hidden></div></div>
+      <span class="preview" id="im-jersey" hidden></span>
+    </div>
+    <p class="im-line" id="im-line" hidden>Paste a Pitchero or tournament link there.</p>
+    <div class="im-paste" id="im-field"><input class="inp" id="im-url" type="url" inputmode="url" aria-labelledby="im-title" placeholder="https://" autocomplete="off" autocapitalize="none" spellcheck="false" enterkeyhint="go" maxlength="2048"><button class="btn" id="im-paste" hidden>Paste</button></div>
+    <p class="im-err" id="im-err" role="alert" hidden></p>
+    <div class="im-cols" id="im-cols" hidden>
+      <div class="field"><span class="lbl">Shirt</span><div class="swatches" id="im-kit"></div></div>
+      <div class="field"><span class="lbl">Trim</span><div class="swatches" id="im-trim"></div></div>
+    </div>
+    <button class="btn primary" id="im-go">Import</button>
+    <div class="row2 one" id="im-row"><button class="btn" id="im-back" data-back>Back to Teams</button><button class="btn warn" id="im-alt" hidden>Remove League</button></div>
+  </div>
+</div>
+
+<section class="screen" id="s-hub" hidden>
+  <div class="wrap">
+    <div class="head"><div><p class="eyebrow" id="hub-eyebrow">Championship</p><h2 class="title" id="hub-title">Round 1 of 5</h2><p class="chase" id="hub-chase"></p></div></div>
+    <div id="hub-next"></div>
+    <div class="honours" id="hub-hon" hidden></div>
+    <div class="season-summary" id="hub-summary"></div>
+    <details class="cabinet" id="hub-cabinet"><summary>Trophy Cabinet</summary><div id="hub-history"></div></details>
+    <div class="tbl"><table>
+      <thead><tr><th class="rk">#</th><th class="t">Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>PD</th><th>BP</th><th>Pts</th></tr></thead>
+      <tbody id="hub-table"></tbody>
+    </table></div>
+    <div class="results" id="hub-results"></div>
+    <div class="row2"><button class="btn" id="hub-back" data-back>Back to Menu</button><button class="btn warn" id="hub-reset">Start Fresh</button></div>
+  </div>
+</section>
+
+<section class="screen" id="s-career-new" hidden>
+  <div class="wrap">
+    <div class="head"><div><p class="eyebrow">Career</p><h2 class="title">New Player</h2></div><button class="btn cr-headback" id="cn-back" data-back>Back to Menu</button></div>
+    <div class="cr-newgrid">
+      <div class="field"><span class="lbl">Your Club</span><div class="cr-clubs" id="cn-clubs"></div></div>
+      <div class="cr-form">
+        <div class="cr-namerow"><label class="field"><span class="lbl">First Name</span><input class="inp" id="cn-name" maxlength="12" placeholder="Optional" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="done"></label><span id="cn-shirt"></span></div>
+        <div class="field"><span class="lbl">Position</span><div class="seg" id="cn-pos"><button>Forward</button><button>Back</button></div></div>
+        <div class="field"><span class="lbl">Shirt Number</span><div class="seg" id="cn-num"></div></div>
+        <button class="btn primary" id="cn-go">Start Career</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="s-career" hidden>
+  <div class="wrap cr-hub">
+    <div class="cr-card" id="cr-card"></div>
+    <div class="cr-main">
+      <div class="head"><div><p class="eyebrow" id="cr-eyebrow">Minis</p><h2 class="title" id="cr-title">Round 1 of 5</h2><p class="chase" id="cr-line"></p><p class="cr-gain" id="cr-gain" hidden></p></div></div>
+      <div id="cr-next"></div>
+      <button class="btn primary" id="cr-play">Play Match</button>
+      <div class="row2"><button class="btn" id="cr-train">Train</button><button class="btn" id="cr-table">Table</button></div>
+      <div class="row2"><button class="btn" id="cr-back" data-back>Back to Menu</button><button class="btn warn" id="cr-reset">Start Fresh</button></div>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="s-career-train" hidden>
+  <div class="wrap">
+    <div class="head"><div><p class="eyebrow">Training</p><h2 class="title">Pick a Drill</h2></div></div>
+    <div class="cr-drills" id="ct-list"></div>
+    <button class="btn" id="ct-back" data-back>Back to Career</button>
+  </div>
+</section>
+
+<section class="screen" id="s-career-table" hidden>
+  <div class="wrap">
+    <div class="head"><div><p class="eyebrow" id="cl-eyebrow">Minis</p><h2 class="title">Table</h2></div></div>
+    <div class="tbl"><table>
+      <thead><tr><th class="rk">#</th><th class="t">Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>PD</th><th>BP</th><th>Pts</th></tr></thead>
+      <tbody id="cl-table"></tbody>
+    </table></div>
+    <div class="results" id="cl-results"></div>
+    <button class="btn" id="cl-back" data-back>Back to Career</button>
+  </div>
+</section>
+
+<section class="screen" id="s-career-end" hidden>
+  <div class="wrap">
+    <div class="head"><div><p class="eyebrow" id="ce-eyebrow"></p><h2 class="title" id="ce-title"></h2><p class="chase" id="ce-line"></p></div><span id="ce-shirt"></span></div>
+    <div class="cr-end" id="ce-body"></div>
+    <div id="ce-act"></div>
+    <button class="btn" id="ce-back" data-back>Back to Menu</button>
+  </div>
+</section>
+
+<section class="screen" id="s-help" hidden>
+  <div class="wrap">
+    <div class="head"><div><p class="eyebrow">Controls</p><h2 class="title">How to Play</h2></div></div>
+    <dl class="help">
+      <dt>Stick</dt><dd>Touch anywhere on the left half and drag. Near a tackler, flick it sideways to <b>Side Step</b>. Pull it back and push on for a <b>Dummy</b>.</dd>
+      <dt>Pass</dt><dd>A tap goes to the teammate in the ring. White means he is free; the ring tints when a defender is on him. Tilt the stick toward a side. Passes can't go forward. Hold the button and the ring turns gold: the ball skips the nearest man and floats to the next one out. A tint inside the gold means that man is marked too.</dd>
+      <dt>Kick</dt><dd>Hold to power, release to kick. A tap is a chip.</dd>
+      <dt>Goal Kicks</dt><dd>Steer the <b>arrow</b>. Hold <b>Kick</b>, let go in the gold.</dd>
+      <dt>Drop Goal</dt><dd>In range the small button reads <b>Drop Goal</b>. Hold it, steer, let go in the gold before they reach you.</dd>
+      <dt>Tackle</dt><dd>When they have the ball. It lights up when you're close enough to dive. Miss and you're on the floor.</dd>
+      <dt>Sprint</dt><dd>Hold it for a burst of speed, with the ball or without. The ring drains while you hold and refills when you let go.</dd>
+      <dt>Offload</dt><dd>Press Pass as you're tackled, when it glows.</dd>
+      <dt>Switch</dt><dd>The dashed ring shows who. Nearest the ball, or the next one if that is you. If your man is behind the ball, the nearest teammate still in front, and the button pulses.</dd>
+      <dt>Ruck</dt><dd>The ring moves to the teammate who will pick the ball up. Place him with the stick, or let go and he runs to the ball. Pass, Kick and Tackle stay dead until it is out.</dd>
+      <dt>Duels</dt><dd>Act on the <b>gold ring</b>: flick the stick to step, or press the button. In a Key Pass, <b>Dummy</b> when he drifts to your runner. Each one starts in slow motion.</dd>
+      <dt>Hints</dt><dd>The card in the top corner names the control for each close-up. Untick <b>Hints</b> on it, or set <b>Match Help</b> to Off on the menu.</dd>
+      <dt>Tutorial</dt><dd>The first time each close-up comes up, play pauses and a card says what to do. <b>Replay Tutorial</b> below shows them all again.</dd>
+      <dt>Coach</dt><dd>The first time Pass, Tackle, an offload, Sprint or a side step comes up, one line tells you. The menu’s <b>Match Help</b> switch controls these tips and the control hints together.</dd>
+      <dt>Scrum</dt><dd>Press <b>Push</b> on the call of Set for a good hit, then tap it fast. Out-shove theirs to steal it.</dd>
+      <dt>Lineout</dt><dd>Press <b>Jump</b> so your jumper is at full height as the ball arrives. Beat theirs to steal the throw.</dd>
+      <dt>Keyboard</dt><dd>Arrows or WASD to run: tap across near a tackler to <b>Side Step</b>, tap back for a <b>Dummy</b>. <b>J</b> Pass (hold for a long pass) / Offload / Tackle / Kick. <b>K</b> Kick / Switch / Drop Goal. <b>L</b> Sprint. <b>P</b> Pause.</dd>
+      <dt class="desk-only">Controller</dt><dd class="desk-only">Stick or D-Pad to run: flick across near a tackler to <b>Side Step</b>, pull back and push on for a <b>Dummy</b>. <b>Bottom Button</b> Pass / Tackle. <b>Right Button</b> Kick / Switch. <b>Shoulder</b> Sprint. <b>Start</b> Pause. Press any button to connect it.</dd>
+      <dt class="desk-only">Two Player</dt><dd class="desk-only">Player 1: <b>W A S D</b> Run, <b>F</b> Pass, <b>G</b> Kick, <b>H</b> Sprint. Player 2: <b>Arrows</b> Run, <b>/</b> Pass, <b>.</b> Kick, <b>,</b> Sprint. Pass is also Tackle, the goal kick (hold it), Push and Jump; Kick is also Switch, Drop Goal and Dummy. A controller takes a seat with one press. In a duel the other player guards, drifts or steps with his run keys before the ring opens, or presses <b>Kick</b> for a Dummy as the passer.</dd>
+    </dl>
+    <div class="scoring">
+      <div><b>5</b><span>Try</span></div><div><b>2</b><span>Conversion</span></div><div><b>3</b><span>Penalty</span></div><div><b>3</b><span>Drop Goal</span></div>
+    </div>
+    <dl class="help">
+      <dt>Table</dt><dd>Win 4, draw 2. <b>+1</b> for four or more tries. <b>+1</b> for losing by seven or fewer. <b>+3</b> for a Grand Slam.</dd>
+      <dt>Install &amp; Offline</dt><dd>On iPhone or iPad, open in Safari, tap <b>Share</b>, then <b>Add to Home Screen</b>. Other browsers may offer <b>Install</b> in their menu. Visit online first and wait for <b>Offline Ready</b> on the home menu before playing without a connection. Browser storage must remain available. Updates appear on the home menu and wait for you to choose <b>Update Game</b>.</dd>
+      <dt>Saving</dt><dd>This browser keeps your settings, the teams you make, and a championship's fixtures, table and round. <b>Continue Championship</b> picks up the next match. <b>Start Fresh</b> on the table clears the current championship and keeps completed seasons in the Trophy Cabinet. Leaving a match, or reloading, keeps the same round to play again.</dd>
+      <dt>First Matches</dt><dd>The first two games on Normal are a little kinder while you learn to turn and chase. A card marked <b>Stronger Side</b> is rated well above yours.</dd>
+      <dt>50:22</dt><dd>Kick from your own half that bounces out inside their 22 and the lineout throw is yours.</dd>
+    </dl>
+    <div class="row2"><button class="btn" id="h-replay">Replay Tutorial</button><button class="btn" id="h-back" data-back>Back to Menu</button></div>
+  </div>
+</section>
+
+<section class="screen" id="s-join" hidden>
+  <div class="wrap">
+    <div class="head"><div><p class="eyebrow">Two Player</p><h2 class="title">Players</h2></div></div>
+    <div class="seats">
+      <div class="seat p1 s0">
+        <p class="eyebrow p1"><i class="stag s0">1</i>Player 1<button class="hc-tick" id="jt0" aria-label="Hints"><i></i><span>Hints</span></button></p>
+        <div class="devrow"><p class="dev" id="j-dev0">Keyboard</p><button class="btn" id="j-kb0" hidden>Use Keyboard</button></div>
+        <div class="legend" id="j-leg0"></div>
+        <div class="set"><span class="lbl">Difficulty</span><div class="seg" id="j-diff0"><button>Easy</button><button>Normal</button><button>Hard</button></div></div>
+      </div>
+      <div class="seat p2 s1">
+        <p class="eyebrow p2"><i class="stag s1">2</i>Player 2<button class="hc-tick" id="jt1" aria-label="Hints"><i></i><span>Hints</span></button></p>
+        <div class="devrow"><p class="dev" id="j-dev1">Keyboard</p><button class="btn" id="j-kb1" hidden>Use Keyboard</button></div>
+        <div class="legend" id="j-leg1"></div>
+        <div class="set"><span class="lbl">Difficulty</span><div class="seg" id="j-diff1"><button>Easy</button><button>Normal</button><button>Hard</button></div></div>
+      </div>
+    </div>
+    <p class="resume-note" id="j-pad">Controller · Press Any Button</p>
+    <button class="btn primary" id="j-go">Pick Teams</button>
+    <div class="row2"><button class="btn" id="j-swap">Swap Players</button><button class="btn" id="j-back" data-back>Back to Menu</button></div>
+  </div>
+</section>
+
+<div class="modal" id="m-pen" hidden>
+  <div class="card">
+    <div class="eyerow"><p class="eyebrow" id="p-eyebrow">Penalty</p><button class="hc-tick" id="ht-pen" aria-label="Hints"><i></i><span>Hints</span></button></div>
+    <h3 id="p-meta">34m to the Posts</h3>
+    <button class="btn primary" id="p-goal">Kick at Goal<small class="hsub" id="p-goal-s">3 Points</small></button>
+    <div class="row2"><button class="btn" id="p-touch">Kick to Touch<small class="hsub">Lineout Upfield</small></button><button class="btn" id="p-tap">Tap and Go<small class="hsub">Play On Now</small></button></div>
+  </div>
+</div>
+
+<div class="modal" id="m-tut" hidden>
+  <div class="card">
+    <p class="eyebrow" id="tu-eye">Tutorial</p>
+    <h3 id="tu-title">Get Past</h3>
+    <p id="tu-text">Beat the Last Man</p>
+    <div class="row2" id="tu-row"><button class="btn" id="tu-skip">Skip</button><button class="btn" id="tu-next">Next</button></div>
+    <button class="btn primary" id="tu-play" hidden>Play</button>
+  </div>
+</div>
+
+<div class="modal" id="m-break" hidden>
+  <div class="card">
+    <p class="eyebrow" id="br-eyebrow">Half Time</p>
+    <div class="final"><span class="fin"><i class="stag s0" id="br-t0" hidden>1</i><span id="br-n0">ENG</span></span><span class="big" id="br-sc">0 – 0</span><span class="fin r"><span id="br-n1">FRA</span><i class="stag s1" id="br-t1" hidden>2</i></span></div>
+    <p class="meta" id="br-tries">Tries 0 – 0</p>
+    <div class="br-stats" id="br-stats" hidden></div>
+    <p class="meta" id="br-pts" hidden></p>
+    <p class="meta" id="br-series" hidden></p>
+    <p class="meta" id="br-seat" hidden></p>
+    <button class="btn primary" id="br-go">Second Half</button>
+    <div class="row2" id="br-row" hidden><button class="btn" id="br-teams">Change Teams</button><button class="btn" id="br-menu">Back to Menu</button></div>
+  </div>
+</div>
+
+<div class="modal" id="m-pause" hidden>
+  <div class="card">
+    <p class="eyebrow">Paused</p>
+    <h3 id="pz-score">England 0 – 0 France</h3>
+    <p id="pz-seat" hidden></p>
+    <button class="btn primary" id="pz-resume">Resume</button>
+    <div id="pz-hints">
+      <div class="set"><span class="lbl" id="pz-hl0">Hints</span><div class="seg" id="pz-h0"><button>On</button><button>Off</button></div></div>
+      <div class="set" id="pz-hrow1" hidden><span class="lbl">Player 2 Hints</span><div class="seg" id="pz-h1"><button>On</button><button>Off</button></div></div>
+      <div class="set" id="pz-cam" hidden><span class="lbl">Camera</span><div class="seg" data-key="cam"><button>Top</button><button>Low</button><button>Mid</button><button>High</button></div></div>
+    </div>
+    <button class="btn warn" id="pz-quit">Quit Match</button>
+  </div>
+</div>
+
+<div class="modal" id="m-gate" hidden>
+  <div class="card" role="dialog" aria-modal="true" aria-labelledby="pg-eyebrow" aria-describedby="pg-q">
+    <p class="eyebrow" id="pg-eyebrow">Ask a Grown-Up</p>
+    <div class="pg-ask"><h3 id="pg-q">What is seventeen times six?</h3><output class="pg-ans" id="pg-ans" aria-live="polite"></output></div>
+    <div class="pg-keys"><button class="btn" id="pg-k1">1</button><button class="btn" id="pg-k2">2</button><button class="btn" id="pg-k3">3</button><button class="btn" id="pg-k4">4</button><button class="btn" id="pg-k5">5</button><button class="btn" id="pg-k6">6</button><button class="btn" id="pg-k7">7</button><button class="btn" id="pg-k8">8</button><button class="btn" id="pg-k9">9</button><button class="btn" id="pg-k0">0</button></div>
+    <div class="row2"><button class="btn" id="pg-del">Delete</button><button class="btn" id="pg-cancel" data-back>Cancel</button></div>
+  </div>
+</div>
+
+<section class="screen" id="s-practice" hidden>
+  <div class="wrap">
+    <div class="head"><div><p class="eyebrow">Learn the Game</p><h2 class="title">Training Ground</h2></div></div>
+    <div class="drills" id="pr-grid">
+      <button class="btn drill" id="pr-egg"><span class="dc-icon" id="pi-egg" aria-hidden="true"></span><span class="dc-name">Bouncy Egg</span></button>
+      <button class="btn drill" id="pr-circle"><span class="dc-icon" id="pi-circle" aria-hidden="true"></span><span class="dc-name">Pass Around the Circle</span></button>
+      <button class="btn drill" id="pr-cones"><span class="dc-icon" id="pi-cones" aria-hidden="true"></span><span class="dc-name">Cones</span></button>
+      <button class="btn drill" id="pr-tackle"><span class="dc-icon" id="pi-tackle" aria-hidden="true"></span><span class="dc-name">Tackling</span></button>
+      <button class="btn drill" id="pr-kick"><span class="dc-icon" id="pi-kick" aria-hidden="true"></span><span class="dc-name">Kicking</span></button>
+      <button class="btn drill" id="pr-scrum"><span class="dc-icon" id="pi-scrum" aria-hidden="true"></span><span class="dc-name">Driving</span></button>
+      <button class="btn drill" id="pr-defend"><span class="dc-icon" id="pi-defend" aria-hidden="true"></span><span class="dc-name">Defend a Breakaway</span></button>
+      <button class="btn drill" id="pr-pass"><span class="dc-icon" id="pi-pass" aria-hidden="true"></span><span class="dc-name">Create a Two-on-One</span></button>
+    </div>
+    <button class="btn" id="pr-back" data-back>Back to Menu</button>
+  </div>
+</section>
+<div id="practice-cue" hidden aria-live="polite"><strong id="pr-objective"></strong><span id="pr-cue"></span></div>
+<div id="drill-hud" hidden><span id="dh-pips"></span><span id="dh-num" hidden></span><span id="dh-bar" hidden><i></i></span></div>
+<div class="modal" id="m-practice" hidden>
+  <div class="card" role="dialog" aria-modal="true" aria-labelledby="pr-result">
+    <p class="eyebrow">Training Ground</p>
+    <div class="pr-title"><span class="dc-icon" id="pr-icon" aria-hidden="true"></span><h2 id="pr-result"></h2></div>
+    <div class="pr-stars" id="pr-stars" role="img" aria-label="" hidden></div>
+    <p id="pr-feedback"></p>
+    <div class="stack">
+      <div class="row2" id="pr-roles" hidden><button class="btn primary" id="pr-runner">Runner</button><button class="btn primary" id="pr-passer">Passer</button></div>
+      <button class="btn primary" id="pr-retry">Try Again</button>
+      <div class="row2" id="pr-row"><button class="btn" id="pr-next">Next Drill</button><button class="btn" id="pr-select" data-back>Back to Training</button></div>
+    </div>
+  </div>
+</div>
+
+<script src="game.js"></script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+/* Practice uses the same team-sheet cards and touch controls as a match. */
+#practice-cue{position:fixed;z-index:5;top:66px;left:50%;transform:translateX(-50%);width:min(500px,65vw);padding:7px 12px;border:1px solid var(--rule-hi);border-radius:6px;background:rgba(11,19,14,.88);text-align:center;pointer-events:none}
+#practice-cue strong{display:block;color:var(--flood);font-size:14px}
+#practice-cue span{display:block;font-size:12px;line-height:1.3;color:var(--chalk)}
+#s-practice .panel p{margin:0;color:var(--chalk-dim)}
+#m-practice{z-index:35}
+#m-practice .card{max-width:480px}
+@media(max-height:420px){#practice-cue{top:51px;width:min(490px,65vw);padding:4px 8px}#practice-cue strong{font-size:12px}#practice-cue span{font-size:11px}}
+
+/* ===== drills: the Training Ground ===== */
+.drills{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.btn.drill{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:88px;padding:10px 8px;text-align:center;font:700 15px/1.15 var(--body)}
+.dc-icon{display:block;width:40px;height:40px;flex:none}
+.dc-icon svg{display:block;width:100%;height:100%;fill:none;stroke:var(--chalk);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.dc-icon .acc{fill:var(--flood);stroke:var(--flood)}
+.dc-icon .acc-line{stroke:var(--flood);stroke-width:3}
+.dc-icon .dash{stroke:var(--chalk-dim);stroke-dasharray:2.5 3}
+.dc-icon .man{fill:var(--chalk-dim);stroke:none}
+.dc-icon .cone{fill:#ff7a1a;stroke:#ff7a1a}
+.dc-icon .seam{stroke:var(--flood-ink);stroke-width:1.4}
+.dc-icon .band{stroke:#62d680;stroke-width:4}
+.dc-name{display:block;text-wrap:balance}
+@media (max-width:560px){.drills{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (orientation:landscape) and (max-height:420px){
+  #s-practice .wrap{gap:12px}
+  .btn.drill{min-height:76px;padding:6px;gap:4px;font-size:14px}
+  .dc-icon{width:32px;height:32px}
+}
+#m-practice .card{gap:12px}
+#m-practice .pr-title{display:flex;align-items:center;gap:12px}
+#m-practice h2{margin:0;font:900 clamp(28px,6vw,38px)/.95 var(--display);text-transform:uppercase;text-wrap:balance}
+#m-practice .pr-title .dc-icon{width:44px;height:44px}
+#m-practice p{margin:0}
+.pr-stars{display:flex;gap:8px}
+.pr-stars i{display:block;width:38px;height:38px}
+.pr-stars svg{display:block;width:100%;height:100%;fill:rgba(241,238,228,.10);stroke:var(--chalk-dim);stroke-width:1.4;stroke-linejoin:round}
+.pr-stars i.on svg{fill:var(--flood);stroke:var(--flood)}
+@media (orientation:landscape) and (max-height:420px){
+  #m-practice{padding:8px}
+  #m-practice .card{gap:8px;padding:12px 16px 14px;max-height:100%;overflow:auto}
+  #m-practice .pr-title .dc-icon{width:36px;height:36px}
+  .pr-stars i{width:32px;height:32px}
+  #m-practice .btn.primary{min-height:50px}
+}
+#drill-hud{position:fixed;z-index:5;top:calc(env(safe-area-inset-top,0px) + 8px);left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;padding:6px 12px;min-height:34px;border:1px solid var(--rule-hi);border-radius:8px;background:rgba(11,19,14,.88);pointer-events:none}
+#dh-pips{display:flex;align-items:center;gap:6px}
+#dh-pips:empty{display:none}
+.dh-pip{display:block;width:15px;height:15px;border-radius:50%;border:2px solid var(--chalk-dim)}
+.dh-pip.got{background:var(--flood);border-color:var(--flood)}
+.dh-pip.miss{border-color:var(--alert);background:linear-gradient(45deg,transparent 40%,var(--alert) 40% 60%,transparent 60%)}
+.dh-pip.now{border-color:var(--chalk);box-shadow:0 0 0 3px rgba(241,238,228,.22)}
+.dh-life{display:block;width:21px;height:21px}
+.dh-life svg{display:block;width:100%;height:100%;fill:#ff5a6e}
+.dh-life.lost svg{fill:none;stroke:var(--chalk-dim);stroke-width:2}
+#dh-num{display:flex;align-items:center;gap:7px;font:900 24px/1 var(--display);font-variant-numeric:tabular-nums;color:var(--chalk)}
+#dh-num.ic-ball::before{content:"";width:19px;height:12px;border-radius:50%;background:#f6f3ea;transform:rotate(-25deg)}
+#dh-num.ic-clock::before{content:"";width:15px;height:15px;border-radius:50%;border:2.5px solid var(--chalk);box-sizing:border-box}
+#dh-bar{display:block;width:150px;height:10px;border-radius:5px;background:rgba(241,238,228,.15);overflow:hidden}
+#dh-bar i{display:block;height:100%;width:calc(var(--t,1)*100%);background:var(--flood)}
