@@ -50,7 +50,8 @@
   <div class="wrap home">
     <header class="mark">
       <h1 class="word" aria-label="Try Line"><span class="try">Try</span><span class="line">Line<span class="posts"></span></span></h1>
-      <p class="eyebrow">Mobile Rugby · Sevens</p>
+      <p class="eyebrow home-club" id="home-club">Play as Your Team · Support Your Team</p>
+      <p class="eyebrow home-tagline">Grassroots to Global</p>
     </header>
     <div class="stack">
       <button class="btn primary" id="b-quick" autofocus>Quick Match</button>
@@ -348,6 +349,8 @@
 </section>
 <div id="practice-cue" hidden aria-live="polite"><strong id="pr-objective"></strong><span id="pr-cue"></span></div>
 <div id="drill-hud" hidden><span id="dh-pips"></span><span id="dh-num" hidden></span><span id="dh-bar" hidden><i></i></span></div>
+<div id="drill-demo" hidden aria-live="polite"><strong id="demo-step"></strong><span id="demo-cap"></span></div>
+<button class="btn" id="demo-skip" hidden>Skip</button>
 <div class="modal" id="m-practice" hidden>
   <div class="card" role="dialog" aria-modal="true" aria-labelledby="pr-result">
     <p class="eyebrow">Training Ground</p>
@@ -356,7 +359,7 @@
     <p id="pr-feedback"></p>
     <div class="stack">
       <div class="row2" id="pr-roles" hidden><button class="btn primary" id="pr-runner">Runner</button><button class="btn primary" id="pr-passer">Passer</button></div>
-      <button class="btn primary" id="pr-retry">Try Again</button>
+      <div class="row2" id="pr-go"><button class="btn primary" id="pr-retry">Try Again</button><button class="btn" id="pr-watch">Watch How</button></div>
       <div class="row2" id="pr-row"><button class="btn" id="pr-next">Next Drill</button><button class="btn" id="pr-select" data-back>Back to Training</button></div>
     </div>
   </div>

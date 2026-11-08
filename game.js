@@ -139,6 +139,7 @@ const STORE = 'tryline.v1';
    It replaces the old duelSeen and kickSeen flags: the first-duel window aid and the first-kick path aid key off it too.
    coach: Coach Tips on the home row, on for a new game. tips: the coach lines this device has already heard (COACH_IDS), each once. */
 const TUT_IDS = ['past', 'pass', 'tackle', 'block', 'scrum', 'lineout', 'goal', 'drop'];
+const DRILL_IDS = ['egg', 'circle', 'cones', 'tackle', 'kick', 'scrum', 'defend', 'pass'];   // drillSeen: the drills whose Watch How has played on this device, each opened with it once (drill-demo.js)
 const COACH_IDS = ['offload', 'step', 'tackle', 'duel', 'kick', 'pass', 'sprint'];   // fleeting moments first, then the ones that stay available
 const COACH_LINE = {
   offload: 'Tap Pass \u2014 offload!',
@@ -149,7 +150,7 @@ const COACH_LINE = {
   pass: 'Tap Pass to move it',
   sprint: 'Hold Sprint for a burst',
 };
-let settings = { half:0, diff:1, sound:true, duels:true, hints:true, twoHints:[true, true], tut:[], coach:true, tips:[], pool:0, twoDiff:[1, 1], played:0, kids:false };   // twoDiff: each player's Difficulty in two player; played: one-player matches started, for the gentler start; kids: the Kids level, a flag on Easy (kids.js)
+let settings = { half:0, diff:1, sound:true, duels:true, hints:true, twoHints:[true, true], tut:[], coach:true, tips:[], pool:0, twoDiff:[1, 1], played:0, kids:false, drillSeen:[], camPick:false };   // twoDiff: each player's Difficulty in two player; played: one-player matches started, for the gentler start; kids: the Kids level, a flag on Easy (kids.js); camPick: the Camera row has been used (cleanSettings)
 let champ = null, custom = [], champHistory = [], seasonSerial = 0;
 let career = null;   // the player career (src/career.js): its own seasons, never the championship's
 let importLeague = null;   // an imported league's other sides, { teams }, cleaned by cleanImportLeague (src/import.js)
@@ -276,7 +277,9 @@ function cleanSettings(g) {
   if (Array.isArray(g.twoDiff) && g.twoDiff.length === 2 && g.twoDiff.every(v => v === 0 || v === 1 || v === 2)) settings.twoDiff = [g.twoDiff[0], g.twoDiff[1]];
   if (Number.isInteger(g.played) && g.played >= 0 && g.played <= 99) settings.played = g.played;
   if (typeof g.kids === 'boolean') settings.kids = g.kids;
-  if (g.cam === 0 || g.cam === 1 || g.cam === 2 || g.cam === 3) settings.cam = g.cam;   // 0 Top: an old save has none and stays there
+  if (Array.isArray(g.drillSeen)) settings.drillSeen = DRILL_IDS.filter(id => g.drillSeen.includes(id));   // only drills the game knows, each once; a save from before Watch How has none, so each plays once
+  if (typeof g.camPick === 'boolean') settings.camPick = g.camPick;
+  if (g.cam === 1 || g.cam === 2 || g.cam === 3 || (g.cam === 0 && g.camPick === true)) settings.cam = g.cam;   // a save with no cam starts on the default, Mid (render-behind.js). So does a Top nobody chose: one build wrote cam 0 into every save as its default, so a 0 counts only with camPick, set by the Camera row
 }
 function restore(s) {
   if (!s || typeof s !== 'object' || Array.isArray(s)) return;
@@ -306,11 +309,12 @@ function load() {
   } catch (e) { /* missing, blocked, or not JSON: keep a fresh game */ }
   settings.duels = true;
 }
+function saveWith(s) { try { localStorage.setItem(STORE, JSON.stringify({ settings:s, champ, custom, champHistory, seasonSerial, career, importLeague })); } catch (e) { /* private mode, or full */ } }
 function save() {
   if (practice) return; // practice never writes settings, tutorial progress or a championship
   settings.duels = true;
   retainCompletedSeason(champ);
-  try { localStorage.setItem(STORE, JSON.stringify({ settings, champ, custom, champHistory, seasonSerial, career, importLeague })); } catch (e) { /* private mode, or full */ }
+  saveWith(settings);
 }
 const tutSeen = id => settings.tut.includes(id);           // has this device had the moment's tutorial (or its first time with Hints off)?
 function tutMark(id) { if (!tutSeen(id)) { settings.tut.push(id); save(); } }
@@ -573,6 +577,7 @@ function catchBall(p, kind) {
   if (rnd() < k) { knockOn(p); return; }
   setCarrier(p);
   p.fromKick = kind === 'kick';
+  if (kind === 'pass' && isHuman(p.team)) p.grace = M.kids ? PASS_FLIGHT.graceKids : PASS_FLIGHT.grace[levelOf(p.team)];   // a moment to see the catch before an AI man can commit
   if (kind === 'intercept') { M.stats.intercepts++; say('Intercepted', 'small'); heat(p.team, 'turnover'); }
 }
 function knockOn(p, why) {                                 // why: 'catch' (the default), 'contact' (jolted loose) or 'offload'
@@ -602,7 +607,7 @@ const LONG = { arm:0.18, auto:0.6, gate:0.12, range:32, knock:0.03 };   // hold 
    running on upfield, he runs onto it at pace whatever the stick says (the stick takes over at the catch), and the line keeps running
    while the ball is in the air. Every lever is here: a: his pick-up (m/s²) from his upfield speed now to top speed × pace; cpu: the
    CPU receiver's pace (a human's is 1; this is the one-player balance lever: 0.6 gives about 87 / 47 on Normal / Hard, 0.7 about
-   81 / 42); keep: how much of his sideways drift the aim keeps; back: the landing spot is capped this far behind the passer at
+   81 / 42 at the old ball pace; PASS_FLIGHT left it at 0.65: paired runs could not tell 0.65 from 0.68, so don't read a small Hard move as this lever's); keep: how much of his sideways drift the aim keeps; back: the landing spot is capped this far behind the passer at
    release, and never forward after the handling error (the law); line: the support slots' upfield lead while a pass is in the air,
    in seconds of the receiver's top speed; kpBack: how far behind the carrier the Key Pass runner may be (6 before the lead). */
 const RUNON = { a:18, cpu:0.65, keep:0.5, back:0.4, line:0.45, kpBack:7.5 };
@@ -610,19 +615,41 @@ const RUNON = { a:18, cpu:0.65, keep:0.5, back:0.4, line:0.45, kpBack:7.5 };
    while a defender is closer than this. mark: the pass ring tints when a defender is closer than this to the man it is on.
    latMax / backMax keep him inside the Key Pass box (4–12m wide, inside kpBack). tint: the marked colour, the alert chalk. */
 const SUPPORT = { lat:5, back:2.6, clear:5, mark:5, latMax:11.2, backMax:6.4, tint:'#ff8466' };
-const passSpeed = (n, long) => (15 + n.handling*1.1) * (long ? 0.88 : 1);   // a long pass hangs a little, so the loop reads
+/* How long a pass hangs in the air (2026-11-08, from the owner's phone playtest: passing in a match is a little hectic). The ball's speed is
+   divided by this, so the flight lasts longer and the lead, the Block lane and the sure pass all aim for the slower ball. It is the one lever to
+   retune after the kid test: 1 is the old pace. match: every match but Kids, Two Player and Training included (your passes hang 13% longer on the
+   bot's mix). kids: a Kids match, both sides' passes (yours 30% longer). A long pass stays off it: it hangs already. A short pass capped by the law
+   stays near the old pace too (capSpeed), or he brakes for it.
+   grace: a slower ball alone left your catcher tackled in the next 0.3s far more often (Kids 22% to 34%, Normal 32% to 38%, Hard 36% to 45%), and
+   easing the defence or the receiver in the air did not bring that back. So your catcher has this long after a catch, by level, before an AI man can
+   commit: Kids, then Easy, Normal, Hard. It costs the bot's Hard balance: 53% at the old pace, about 61% if Hard had 0.25, 57% at its 0.15, and it leaves Hard's rate 4 points up.
+   PASS_FLIGHT='{"match":1.25}' node tools/bot.mjs tries a value without an edit. */
+const PASS_FLIGHT = { match:1.2, kids:1.4, grace:[0.25, 0.25, 0.15], graceKids:0.35 };
+const passFlight = () => (M && M.kids ? PASS_FLIGHT.kids : PASS_FLIGHT.match);
+const passSpeedOld = (n, long) => (15 + n.handling*1.1) * (long ? 0.88 : 1);   // the ball before the lever: a long pass hangs a little, so the loop reads
+const passSpeed = (n, long) => passSpeedOld(n, long) / (long ? 1 : passFlight());   // a long pass keeps its pace: it hangs already, and the lever on top held one up to 2.9s with the stick doing nothing
 const passPace = team => (isHuman(team) ? 1 : RUNON.cpu);   // how hard a side's receiver runs onto the ball, by role
 function runOn(r, d, t, pace) {                             // how far upfield r gets in t seconds running on from his upfield speed now, picking up at RUNON.a to top speed × pace
   const vm = maxSpeed(r)*pace, v0 = clamp(r.vx*d, 0, vm), ta = Math.min(t, (vm - v0)/RUNON.a);
   return v0*ta + 0.5*RUNON.a*ta*ta + vm*(t - ta);
 }
+function capSpeed(to, d, need, far, fast, slow, pace) {      // the law fixes the landing spot, so a longer flight only makes him brake for it: the ball's speed, between the old pace and the lever's, that lets him reach the spot at his run
+  const t = v => far/v + 0.06;
+  if (need <= runOn(to, d, t(fast), pace)) return fast;
+  if (need >= runOn(to, d, t(slow), pace)) return slow;
+  for (let i = 0; i < 8; i++) { const v = (fast + slow)/2; if (runOn(to, d, t(v), pace) < need) fast = v; else slow = v; }
+  return slow;
+}
 function leadPass(from, to, o) {                            // the aim: where the ball lands if he runs onto it, before the handling error. blockSpec reads the same point, so the Block close-up shows the line the ball takes
   o = o || {};
-  const d = dirOf(from.team), spd = passSpeed(M.nat[from.team], o.long), pace = passPace(from.team);
-  let tx = to.x, ty = to.y, T = 0.2;
+  const d = dirOf(from.team), n = M.nat[from.team], pace = passPace(from.team);
+  let spd = passSpeed(n, o.long), tx = to.x, ty = to.y, T = 0.2;
   for (let i = 0; i < 4; i++) { T = hyp(tx-from.x, ty-from.y)/spd + 0.06; tx = to.x + d*runOn(to, d, T, pace); ty = to.y + to.vy*RUNON.keep*T; }
-  if ((tx-from.x)*d > -RUNON.back) tx = from.x - d*RUNON.back;
-  return { x:tx, y:ty, T };
+  if ((tx-from.x)*d > -RUNON.back) {
+    tx = from.x - d*RUNON.back;
+    spd = capSpeed(to, d, (tx-to.x)*d, hyp(tx-from.x, ty-from.y), passSpeedOld(n, o.long), spd, pace);
+  }
+  return { x:tx, y:ty, T, spd };
 }
 function runOnTarget(r, f, pace) {                          // the receiver while the pass is in the air: onto the landing spot as the ball gets there, at pace, never braking for it
   const rem = Math.max(STEP, f.T - f.t), dd = hyp(f.x1 - r.x, f.y1 - r.y);
@@ -701,18 +728,18 @@ function doPass(from, to, o) {
   o = o || {};
   const b = M.ball, n = M.nat[from.team], d = dirOf(from.team);
   const spd = passSpeed(n, o.long);
-  let tx, ty, T;
+  let tx, ty, T, v = spd;
   if (o.sure) {                                            // a won Key Pass: thrown at where the runner is going, as it always was, and never caught in touch
     tx = to.x; ty = to.y; T = 0.2;
     for (let i = 0; i < 3; i++) { T = hyp(tx-from.x, ty-from.y)/spd + 0.06; tx = to.x + to.vx*T; ty = to.y + to.vy*T; }
     if ((tx-from.x)*d > 0) tx = from.x;
     ty = clamp(ty, 3, 67);
   } else {                                                 // led: where he will be running on, then the handling error, and never forward of the passer (the law)
-    const a = leadPass(from, to, o); tx = a.x; ty = a.y;
+    const a = leadPass(from, to, o); tx = a.x; ty = a.y; v = a.spd;
     const err = ((5-n.handling)*0.08 * (o.long ? 1.7 : 1) + (o.long ? 0.4 : 0))*(M.kids && isHuman(from.team) ? KIDS.passErr : 1); tx += gauss()*err; ty += gauss()*err;   // Kids: your passes stray less
     if ((tx-from.x)*d > 0) tx = from.x;
   }
-  T = hyp(tx-b.x, ty-b.y)/spd + 0.06;
+  T = hyp(tx-b.x, ty-b.y)/v + 0.06;
   const dist = hyp(tx-b.x, ty-b.y);
   const H = o.long ? Math.min(6.4, 1.5 + dist*0.11) : 0.5;   // higher with the distance, so it sails over the skipped man's defender
   b.state = 'air'; b.carrier = null; b.last = from.team;
@@ -998,7 +1025,7 @@ function resolveRuck(s) {                                  // the ruck is automa
 // a Drop Goal press: the 0.20s to the close-up is the kicker's, and a man close enough to stop it is judged as a charger in the cut
 const dropHolding = c => !!c && !!M.dropArmed[c.team] && !!sideOf(c.team).charging && M.ball.carrier === c;
 function tackleChecks(c) {
-  if (dropHolding(c)) return false;
+  if (dropHolding(c) || c.grace > 0) return false;
   for (const q of M.players) {
     if (q.team === c.team || q.down > 0 || q.tcd > 0 || q.offside > 0 || q.bind) continue;
     const user = ringed(q);
@@ -1050,6 +1077,7 @@ function bestChaser(team) {                                // the nearest man of
   return best;
 }
 function sprintPick(t) {                                   // the man a Sprint press would move the ring to: the best chaser when yours is down or another is over SPRINT.pick nearer their carrier; null to stay put
+  if (practice && practice.id === 'defend' && ctrlOf(t) !== practice.initialCtrl) return null;   // Defend a Breakaway: once you have switched into cover, Sprint never hands the ring back to the beaten man
   const b = M.ball, p = ctrlOf(t), c = b.state === 'held' && b.carrier.team !== t ? b.carrier : null, best = c ? bestChaser(t) : null;
   return c && best && best !== p && (!p || !onFeet(p) || dist(p, c) - dist(best, c) > SPRINT.pick) ? best : null;
 }
@@ -1791,7 +1819,7 @@ function scrumPush(c, s, dt) {                             // a human pack's sho
     const note = text => { if (M.two) c.msg[s] = { text, at:t }; else say(text, 'small'); };   // two player: a tag over that pack in its seat colour, so two hits at once don't fight over the banner
     if (t < SCRUM_SET - 0.08) { if (!c.early[s] && !c.hit[s]) { c.early[s] = true; c.pos -= 0.25*d; note('Early'); } }
     else if (!c.hit[s] && !c.early[s] && t <= SCRUM_SET + 0.28) { c.hit[s] = true; c.pos += 0.35*d; note('Good Hit'); buzz(25, s); }
-    if (t >= SCRUM_SET) { c.rate[s] += 1; c.taps[s]++; }
+    if (t >= SCRUM_SET) { c.rate[s] += practice && !practice.demo ? drillRate() : 1; c.taps[s]++; }   // a live drill's clock runs slow, so a real tap counts for less and the same thumb makes the same shove. A demo's pilot taps on the drill's own clock
   }
   if (t < SCRUM_SET) return 0;
   c.rate[s] *= Math.exp(-dt/0.25);
@@ -2284,7 +2312,7 @@ function applyDuel(c) {
       const o = c.open;
       put(U, at(1.3, 1.2*o), true); put(O, at(0, -0.6*o));
       O.down = 0.9; O.tcd = 1; O.vx = O.vy = 0;
-      U.side = 0.35;
+      U.side = 0.35; artStepped(U, frameVec(own, { x:0, y:o }).y);   // he comes out of the close-up on the art's feint: render-only
       const m = hyp(1, 0.3); face(U, 1/m, 0.3*o/m);
       setBoost(U, ...(c.res === 'perfect' ? BURST.perfect : BURST.ok));
       U.autoDir = o;
@@ -2296,6 +2324,7 @@ function applyDuel(c) {
       const lat = c.res === 'early' && c.act ? 0.8*c.act : 0;
       put(U, at(1.0, lat), true); put(O, at(0.4));
       U.side = 0.35; O.down = 0.5; O.tcd = 1; O.vx = O.vy = 0; M.stats.broken++; countTk(O.team, false);
+      if (c.kind === 'past') artStepped(U, frameVec(own, { x:0, y:lat || 1 }).y);   // and here
       break;
     }
     case 'pass:drawn':
@@ -2796,7 +2825,7 @@ function aiCarrier(p, dt) {
   if (toLine < 12) ay += (35-p.y)*0.015;
   const m = hyp(ax,ay) || 1, sp = maxSpeed(p)*0.95;
   steer(p, ax/m*sp, ay/m*sp, 15, dt);
-  if (near < 3 && p.side <= -0.9 && rnd() < dt*0.9*n.handling/5) { p.side = 0.35; p.vy += (rnd() < 0.5 ? -1 : 1)*MOVES.step.cpuPush; }
+  if (near < 3 && p.side <= -0.9 && rnd() < dt*0.9*n.handling/5) { p.side = 0.35; const s = rnd() < 0.5 ? -1 : 1; p.vy += s*MOVES.step.cpuPush; artStepped(p, s); }
   p.think -= dt; if (p.think > 0) return; p.think = 0.15;
   if (p.hold < 0.5) return;
   const KD = MOVES.dummy, lv = levelOf(p.team);
@@ -2922,6 +2951,7 @@ function sideStep(c, j, s) {                               // the carrier steps 
   M.stats.steps = (M.stats.steps || 0) + 1; st('steps' + c.team);
   if (ringed(c)) tag('Side Step', c.x, c.y);
   sfx('whoosh'); buzz(15, c.team);
+  artStepped(c, s);                                        // the art's feint: render-only, nothing else reads it
 }
 function dummyPass(c, r) {                                 // c shows a pass to r and keeps the ball: the nearest standing AI defender ahead may buy it. False when there is nobody to sell
   const K = MOVES.dummy, t = c.team, d = dirOf(t);
@@ -3063,6 +3093,7 @@ function moveAll(dt) {
     if (p.wf > 0) p.wf -= dt;
     if (p.bite > 0) p.bite -= dt;
     if (p.boost > 0) p.boost -= dt;
+    if (p.grace > 0) p.grace -= dt;                        // the moment after a catch: see PASS_FLIGHT
     if (p.side > -1) p.side -= dt;
     p.hold += dt;
     p.x = clamp(p.x, -4, 124);
@@ -3079,8 +3110,11 @@ function computeTargets() {
   return targets;
 }
 function update(dt) {
+  if (practice && practice.demo && demoStep(dt)) return;   // Watch How: the pilot writes the input first, or the world holds (drill-demo.js)
+  if (practice) dt *= drillRate();                         // a drill runs at its own pace, the world and its clocks together; a match is untouched
   if (!(practice && practice.space)) matchUpdate(dt);      // a training space has no match flow: its drill moves the men and the ball (training.js)
   practiceTick(dt);
+  if (practice && practice.demo) demoSync();               // the ghost shows what the input holds after the step
 }
 function matchUpdate(dt) {
   if (!M || M.phase === 'break' || M.phase === 'menu' || M.paused || M.over) return;
@@ -4711,13 +4745,14 @@ function duelLabels(c) {
   return [c.kind === 'tackle' ? 'Tackle' : 'Block', null];
 }
 /* =========================================================
-   Player looks, for the behind views only: height, build, skin, hair and a head style. Worked out from the team and shirt number with
+   Player looks, for the behind views only: height, build, skin, hair, a head style and a body (g: 0 male, 1 female, on the same rig in the same kit). Worked out from the team and shirt number with
    a local generator, so the same man looks the same every run, the match's random stream is never touched and nothing is added to
    M.players or a save. Skin is never tied to a team or a country. A squad entry with a look (the future career player) overrides it.
    ========================================================= */
 const LOOK_SKIN = ['#f1d0b4', '#e2b593', '#c69c7c', '#a8764f', '#7f5337', '#553522'];
 const LOOK_HAIR = ['#17120e', '#2a1d16', '#4c2f1b', '#7d4f25', '#c29a55', '#a33f1f'];
 const LOOK_RANGE = { h:[1.62, 2.02], b:[0.88, 1.16] };
+const LOOK_STYLES = 8;                                      // short, shaved, big hair, scrum cap, headband, bun, ponytail, plait: the code-drawn man shows the last two as a bun
 const LOOKS = new WeakMap();
 function lookHash(text) {                                   // FNV-1a
   let h = 2166136261;
@@ -4728,7 +4763,9 @@ function cleanLook(l) {                                     // keeps only the fi
   const out = {};
   if (!l || typeof l !== 'object') return out;
   for (const k of ['h', 'b']) if (Number.isFinite(l[k])) out[k] = clamp(l[k], LOOK_RANGE[k][0], LOOK_RANGE[k][1]);
-  for (const k of ['skin', 'hair', 'style']) if (Number.isInteger(l[k])) out[k] = clamp(l[k], 0, 5);
+  for (const k of ['skin', 'hair']) if (Number.isInteger(l[k])) out[k] = clamp(l[k], 0, 5);
+  if (Number.isInteger(l.style)) out.style = clamp(l.style, 0, LOOK_STYLES - 1);
+  if (l.g === 0 || l.g === 1) out.g = l.g;
   return out;
 }
 function lookRng(seed) {                                    // mulberry, with its own state
@@ -4754,18 +4791,298 @@ function lookOf(p) {
     skin:(Math.floor(deal('skin')*6/7) + teamHash) % 6,      // every squad holds all six, one of them twice, so no tone belongs to a team
     hair:(Math.floor(deal('hair')*6/7) + teamHash) % 6,
     style:(teamHash + p.n*5) % 6,                           // walks the six styles shirt by shirt
+    g:0,
   };
   const entry = Array.isArray(nat.squad) ? nat.squad.find(e => e && e.n === p.n) : null;
-  look = { ...seeded, ...cleanLook(entry && entry.look) };
+  const own = cleanLook(entry && entry.look);
+  if (own.g && own.style == null) seeded.style = (teamHash + p.n*5) % LOOK_STYLES;   // a female body with no style of her own also walks the ponytail and the plait
+  look = { ...seeded, ...own };
   LOOKS.set(p, look);
   return look;
 }
 /* =========================================================
-   The behind views: an optional 2.5D camera for one-player matches (Low, Mid, High). Top stays today's view through today's code: render
+   The player art for the behind views: sprites rendered in Blender (tools/blender/build_players.py) and tinted here into any kit, skin and hair. One packed atlas
+   holds every body part's light: R the shade, G the part id x 16, B the coverage. A man's picture is tinted into a slot on a fixed set of sheets on first use, a few
+   a frame, and the oldest slot is reused when a sheet is full, so the memory is bounded. Until the atlas is in, or if it never comes, paintMan draws him as before.
+   Top, Two Player and the close-ups never come here. Nothing here touches a man's object or draws a random number.
+   ========================================================= */
+const ART_TIERS = [40, 64];                                 // pixels per metre on the sheets: 40 is the main depth on a phone, drawn a little down, so it stays crisp
+const ART_SHEET = 1024, ART_CAPS = { stand:[3, 2], low:[1, 1] };   // sheets per shape and tier, 4MB each: 28MB at the very most
+const ART_BAKES = 6;                                        // pictures tinted in one frame
+const ART_CLIPS = ['idle', 'carryidle', 'run', 'sprint', 'carry', 'pass', 'sidestep', 'tackle', 'fall', 'lying', 'getup'];
+const ART_STEP_T = 0.36;                                    // the Side Step's six pictures play over this long. The move itself is unchanged: its push has already landed
+const ART_STEP = new WeakMap();                             // who stepped, when and which way across the pitch: render-only, off the player object
+const artStepped = (p, side) => { ART_STEP.set(p, { at:M.rt, s:side }); };
+const ART = { state:'idle', gen:0, man:null, pages:[], classes:{}, map:new Map(), sheets:0, tick:0, next:1, epoch:0, baked:0, bakeMs:0, scratch:null, sg:null, img:null, luts:new Map(), last:null, promise:null };
+const artReady = () => ART.state === 'ready';
+function artInstall(man, pages) {                           // a parsed players.json and its decoded pages: [{ w, h, data }]
+  ART.gen++; ART.man = man; ART.pages = pages; ART.ids = ART_CLIPS.reduce((o, c, i) => { o[c] = i; return o; }, {});
+  ART.parts = man.parts; ART.state = 'ready'; artClear();
+}
+function artOff() { ART.state = 'off'; ART.man = null; ART.pages = []; artClear(); }
+function artBadPage(data) {                                 // a browser that alters pixels it hands back would tint garbage: the ids must come back whole
+  let seen = 0, bad = 0;
+  for (let i = 0; i < data.length && seen < 4000; i += 4*37) { if (data[i + 2]) { seen++; if (data[i + 1] & 15) bad++; } }
+  return !seen || bad > 0;
+}
+function artDecode(base, name) {
+  return new Promise((ok, no) => {
+    const im = new Image();
+    im.onload = () => {
+      try {
+        const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight;
+        const g = c.getContext('2d', { willReadFrequently:true }); g.drawImage(im, 0, 0);
+        const d = g.getImageData(0, 0, c.width, c.height), page = { w:c.width, h:c.height, data:d.data };
+        c.width = 0;
+        if (artBadPage(page.data)) no(new Error('atlas pixels altered')); else ok(page);
+      } catch (e) { no(e); }
+    };
+    im.onerror = () => no(new Error('atlas failed'));
+    im.src = base + name;
+  });
+}
+function artLoad(base = 'assets/players/') {                // once: over the network or from the service worker's precache. Any failure leaves the code-drawn men in place
+  if (ART.state !== 'idle') return ART.promise;
+  if (typeof Image === 'undefined' || typeof fetch !== 'function') { ART.state = 'off'; return null; }
+  ART.state = 'loading';
+  const gen = ++ART.gen, stale = () => gen !== ART.gen;     // artFree during a load: the pages already decoded go, and nothing is installed
+  const started = typeof performance !== 'undefined' ? performance.now() : 0;
+  return ART.promise = (async () => {
+    try {
+      const r = await fetch(base + 'players.json');
+      if (!r.ok) throw new Error('no manifest');
+      const man = await r.json(), pages = [];
+      for (const name of man.pages) { if (stale()) return; pages.push(await artDecode(base, name)); await new Promise(res => setTimeout(res, 0)); }   // a breath between pages
+      if (stale()) return;
+      artInstall(man, pages);
+      ART.loadMs = (typeof performance !== 'undefined' ? performance.now() : 0) - started;
+    } catch (e) { if (!stale()) artOff(); }
+  })();
+}
+function artClear() {                                       // every picture is forgotten; the sheets are kept for the next match
+  ART.map.clear(); ART.tick = 0; ART.next = 1; ART.epoch++; ART.luts.clear();
+  for (const k in ART.classes) { const c = ART.classes[k]; c.free = 0; for (const slot of c.slots) slot.key = -1; }
+}
+function artFree() {                                        // a match on Top or Two Player, or a drill: the sheets (28MB at most) and the decoded pages (36MB) go, and the next behind view loads them again
+  for (const k in ART.classes) for (const c of ART.classes[k].canvases) c.width = 0;
+  ART.classes = {}; ART.sheets = 0; artClear();
+  ART.gen++; ART.man = null; ART.pages = []; ART.promise = null;
+  if (ART.state !== 'off') ART.state = 'idle';
+}
+
+/* ---------- tinting ---------- */
+function artLut(hex, gain = 1) {                            // 256 shades of one colour. Mid light is the colour itself, bright light lifts a little toward white, so even a black shirt shows its folds
+  const id = hex + gain;
+  let L = ART.luts.get(id);
+  if (L) return L;
+  const [r, g, b] = hexRgb(hex);
+  L = new Uint8Array(768);
+  for (let s = 0; s < 256; s++) {
+    const v = s/255, k = Math.min(v/0.70, 1.06)*gain, lift = Math.max(0, v - 0.46)*62;
+    L[s*3] = Math.min(255, r*k + lift); L[s*3 + 1] = Math.min(255, g*k + lift); L[s*3 + 2] = Math.min(255, b*k + lift);
+  }
+  ART.luts.set(id, L);
+  return L;
+}
+function artMix(a, b, t) { const x = hexRgb(a), y = hexRgb(b); return '#' + x.map((v, i) => Math.round(v + (y[i] - v)*t).toString(16).padStart(2, '0')).join(''); }
+function artPalette(p) {                                    // part id to colour table, for this man in this match
+  const kit = kitOf(p.team), look = lookOf(p), skin = LOOK_SKIN[look.skin], hair = LOOK_HAIR[look.hair];
+  const grassy = c => colorDist(c, C.grassA) < 60 || colorDist(c, C.grassB) < 60, cap = grassy(kit.trim) ? '#f1eee4' : kit.trim;
+  // the collar and cuffs sit between shirt and skin: if the trim is as dark as the skin, they lift, so the arm never melts into the shirt
+  const trim = colorDist(kit.trim, skin) < 70 && colorDist(kit.shirt, skin) < 90 ? '#f1eee4' : kit.trim;
+  const table = { shirt:kit.shirt, hoop:kit.hoops ? kit.trim : kit.shirt, trim, shorts:kit.shorts, socks:kit.shirt, skin, hair, boots:'#22252b', shaved:artMix(skin, hair, 0.45), eye:'#120e0c', cap, line:'#0a120d' };
+  const out = [null];
+  for (const name of ART.parts) out.push(artLut(table[name]));
+  return out;
+}
+function artBlit(g, r, luts, T, dx, dy, W) {                 // one crop of the atlas, tinted, drawn at dx, dy in metres
+  const page = ART.pages[r[0]], d = page.data, w = r[3], h = r[4], out = ART.img.data, pw = page.w*4;
+  for (let y = 0; y < h; y++) {
+    let i = (r[2] + y)*pw + r[1]*4, j = y*W*4;
+    for (let x = 0; x < w; x++, i += 4, j += 4) {
+      const cov = d[i + 2];
+      if (cov) { const L = luts[d[i + 1] >> 4], s = d[i]*3; out[j] = L[s]; out[j + 1] = L[s + 1]; out[j + 2] = L[s + 2]; out[j + 3] = cov; }
+      else out[j + 3] = 0;
+    }
+  }
+  for (let y = 0; y <= h; y++) out[(y*W + w)*4 + 3] = 0;     // a clear edge past the crop: scaling down samples it, and it may hold the last picture
+  for (let x = 0; x < w; x++) out[(h*W + x)*4 + 3] = 0;
+  ART.sg.putImageData(ART.img, 0, 0, 0, 0, w + 1, h + 1);
+  const q = T/ART.man.px;
+  g.drawImage(ART.scratch, 0, 0, w, h, dx*T, dy*T, w*q, h*q);
+}
+function artClass(shape, tier) {                            // the slots for one shape at one tier
+  const id = shape + tier;
+  let c = ART.classes[id];
+  if (!c) {
+    const S = ART.man.shapes[shape], T = ART_TIERS[tier];
+    c = ART.classes[id] = { id, w:Math.ceil(S.w*T), h:Math.ceil(S.h*T), S, T, shape, tier, slots:[], canvases:[], cap:ART_CAPS[shape][tier], free:0 };
+  }
+  return c;
+}
+function artSlot(c) {                                       // an unused slot, a new sheet, or the slot unseen for longest
+  for (; c.free < c.slots.length; c.free++) if (c.slots[c.free].key < 0) return c.slots[c.free++];
+  if (c.canvases.length < c.cap) {
+    const cv = document.createElement('canvas'); cv.width = cv.height = ART_SHEET;
+    const g = cv.getContext('2d'); c.canvases.push(cv); ART.sheets++;
+    if (g.imageSmoothingQuality !== undefined) g.imageSmoothingQuality = 'high';
+    for (let y = 0; y + c.h <= ART_SHEET; y += c.h + 2) for (let x = 0; x + c.w <= ART_SHEET; x += c.w + 2) c.slots.push({ cv, g, x, y, key:-1, t:0, c });
+    return artSlot(c);
+  }
+  let old = c.slots[0];
+  for (const s of c.slots) if (s.t < old.t) old = s;
+  ART.map.delete(old.key);
+  old.key = -1;
+  return old;
+}
+function artBake(p, s, key, r, clip, deg, tier, mirror) {   // one picture for one man
+  const started = performance.now();
+  bvArmFonts();
+  const man = ART.man, c = artClass(man.clips[clip].shape, tier), slot = artSlot(c), g = slot.g, T = c.T, S = c.S, q = 1/man.px;
+  if (!ART.img) {
+    ART.scratch = document.createElement('canvas'); ART.scratch.width = ART.scratch.height = 256;
+    ART.sg = ART.scratch.getContext('2d', { willReadFrequently:true });
+    ART.img = ART.sg.createImageData(256, 256);
+  }
+  g.clearRect(slot.x, slot.y, c.w, c.h);
+  g.save(); g.beginPath(); g.rect(slot.x, slot.y, c.w, c.h); g.clip();
+  g.translate(slot.x + S.ox*T, slot.y + S.oy*T);
+  // a soft shadow on the grass, a little up the screen because the sun is behind the lens. As wide as the man is, and deeper if he is lying down
+  const low = c.shape === 'low', wide = clamp(r[3]*q*0.5, 0.26, 1.1), deep = low ? clamp(r[4]*q*0.42, 0.12, 0.5) : 0.13, up = low ? (r[6]*q - r[4]*q*0.5)*-1 : 0.05;
+  g.save(); g.translate(0, low ? -up*0.1*T : -up*T); g.scale(1, deep/wide);
+  const sh = g.createRadialGradient(0, 0, 0, 0, 0, wide*T);
+  sh.addColorStop(0, 'rgba(6,14,8,.5)'); sh.addColorStop(0.55, 'rgba(6,14,8,.3)'); sh.addColorStop(1, 'rgba(6,14,8,0)');
+  g.fillStyle = sh; g.beginPath(); g.arc(0, 0, wide*T, 0, 7); g.fill(); g.restore();
+  if (mirror) g.scale(-1, 1);
+  const luts = artPalette(p);
+  artBlit(g, r, luts, T, -r[5]*q, -r[6]*q, 256);
+  const look = lookOf(p), style = man.styles[look.style] || man.styles[0], hk = man.hair[style] && man.hair[style][r[7]];
+  if (hk) artBlit(g, hk, luts, T, (r[8] - hk[5])*q, (r[9] - hk[6])*q, 256);
+  if (mirror) g.scale(-1, 1);
+  if (artNumbered(c.shape, deg)) {                           // the number, drawn in type so a mirrored man keeps it readable
+    const kit = kitOf(p.team), squeeze = deg ? 0.8 : 1, nx = (mirror ? -r[10] : r[10])*q*T, ny = r[11]*q*T;
+    g.save(); g.translate(nx, ny); g.scale(squeeze, 1);
+    g.fillStyle = luma(kit.shirt) > 0.6 ? '#1b2233' : '#f1eee4';
+    g.font = `900 ${Math.round(0.31*T)}px 'Big Shoulders Display', Impact, sans-serif`;
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    if (kit.hoops) { g.strokeStyle = kit.shirt; g.lineWidth = 0.08*T; g.lineJoin = 'round'; g.strokeText(String(p.n), 0, 0); }
+    g.fillText(String(p.n), 0, 0);
+    g.restore();
+  }
+  g.restore();
+  slot.key = key; slot.t = ART.tick; ART.map.set(key, slot);
+  ART.baked++; ART.bakeMs += performance.now() - started;
+  return slot;
+}
+
+/* ---------- which picture ---------- */
+const artNumbered = (shape, deg) => shape === 'stand' && (deg === 0 || deg === 45);
+const artBuild = b => (b < 0.96 ? 'slim' : b < 1.06 ? 'medium' : 'stocky');
+function artFacing(s, fu, fr) {                             // eight facings, with hysteresis so a man near a diagonal doesn't flicker. 0 is straight up the screen, clockwise
+  const a = (Math.atan2(fr, fu)/D2R + 360) % 360, cur = (s.d8 == null ? -1 : s.d8);
+  if (cur >= 0) { let off = Math.abs(a - cur*45); if (off > 180) off = 360 - off; if (off < 29) return cur; }
+  return s.d8 = Math.round(a/45) % 8;
+}
+function artTrack(s, sp, p, L) {                            // the stride follows ground covered at the art's own stride length, so a planted foot stays planted
+  const moved = s.dist - (s.dl == null ? s.dist : s.dl);
+  s.dl = s.dist;
+  const m = hyp(p.fx, p.fy) || 1, back = sp > 0.5 && (p.vx*p.fx + p.vy*p.fy)/(m*sp) < -0.3;
+  s.ph = ((s.ph || 0) + (back ? -moved : moved)/L + 1000) % 1;
+  return Math.floor(s.ph*8) & 7;
+}
+function artPose(cam, p, s, k, tackler, carrier, sp, spr) { // the clip and frame this man should show this frame
+  const man = ART.man, sc = lookOf(p).h/1.8, step = carrier && !k ? ART_STEP.get(p) : null, stepU = step ? M.rt - step.at : -1;
+  let fx = p.fx, fy = p.fy, clip, frame = 0, side = 0;
+  if (p.down > 0) {
+    if (!s.dn) { s.dn = true; s.dnAt = M.rt; s.dnT = p.down; }
+    const up = Math.min(0.26, s.dnT*0.35), fall = Math.min(0.24, s.dnT*0.35), u = M.rt - s.dnAt;
+    if (RM || (u >= fall && p.down >= up)) clip = 'lying';
+    else if (u < fall) { clip = 'fall'; frame = Math.min(2, Math.floor(u/fall*3)); }
+    else { clip = 'getup'; frame = Math.min(2, Math.floor((1 - p.down/up)*3)); }
+    artTrack(s, 0, p, man.stride.run);
+  } else {
+    s.dn = false;
+    if (tackler) {
+      clip = 'tackle'; fx = k.c.x - s.wx; fy = k.c.y - s.wy;
+      const u = k.T ? clamp(k.t/k.T, 0, 1) : 1, dive = k.mode === 'dive' || k.mode === 'ankle';
+      frame = dive ? (u < 0.2 ? 1 : 2) : (u < 0.3 ? 0 : 1);
+      artTrack(s, 0, p, man.stride.run);
+    } else if (s.passAt != null && M.rt - s.passAt < 0.3 && !carrier) {
+      const u = M.rt - s.passAt; clip = 'pass'; side = s.passSide; frame = u < 0.05 ? 0 : u < 0.14 ? 1 : 2;
+      artTrack(s, sp, p, man.stride.run);
+    } else if (stepU >= 0 && stepU < ART_STEP_T) {            // the feint, the plant and the step: its own clock, because a stride can't tell the story in 0.36s
+      clip = 'sidestep'; side = step.s; frame = Math.floor(stepU/ART_STEP_T*6);
+      artTrack(s, sp, p, man.stride.run);
+    } else if (carrier) {
+      if (k || sp >= 0.6) { clip = 'carry'; frame = artTrack(s, sp, p, man.stride.run*sc); }
+      else { clip = 'carryidle'; artTrack(s, sp, p, man.stride.run); }
+    } else if (sp < 0.6) {
+      clip = 'idle'; frame = Math.floor(M.rt*1.2 + p.n*0.37) & 1;
+      artTrack(s, sp, p, man.stride.run);
+    } else if (spr > 0 || sp > 7) { clip = 'sprint'; frame = artTrack(s, sp, p, man.stride.sprint*sc); }
+    else { clip = 'run'; frame = artTrack(s, sp, p, man.stride.run*sc); }
+  }
+  const m = hyp(fx, fy) || 1, fu = (fx*cam.u.x + fy*cam.u.y)/m, fr = (fx*cam.r.x + fy*cam.r.y)/m, d8 = artFacing(s, fu, fr);
+  // the art throws to the body's left and steps to its right: the other way round is the same picture, mirrored
+  const flip = clip === 'pass' ? side > 0 : clip === 'sidestep' ? step.s*(cam.r.y*fu - cam.u.y*fr) < 0 : false;
+  return artSprite(clip, frame, d8, flip, lookOf(p));
+}
+const ART_OUT = { clip:'', frame:0, deg:0, dir:0, mirror:false, row:null, build:null };
+function artSprite(clip, frame, d8, flip, look) {           // the atlas row for a facing, mirrored where the art allows
+  const man = ART.man, c = man.clips[clip], b = artBuild(look.b), body = man.sprites[b + (look.g ? '.f' : '.m')] || man.sprites[b + '.m'], rows = body[clip], out = ART_OUT;
+  let d = d8, mirror = false;
+  if (c.dirs.length === 8) { if (flip) { d = (8 - d8) % 8; mirror = true; } }
+  else if (d > 4) { d = 8 - d; mirror = true; }
+  out.clip = clip; out.frame = frame % c.n; out.dir = d; out.mirror = mirror; out.build = b;
+  out.deg = c.dirs[d]; if (out.deg > 180) out.deg = 360 - out.deg;
+  out.row = rows[d*c.n + out.frame];
+  return out;
+}
+function artPrepare(cam) {                                  // once a frame: note who has just thrown a pass, and to which side of his body
+  ART.tick++;
+  const b = M.ball;
+  if (b.state === 'held') { ART.last = b.carrier; return; }
+  const from = ART.last;
+  if (b.state === 'air' && b.f && b.f.kind === 'pass' && from) {
+    const s = bvMan(from), m = hyp(from.fx, from.fy) || 1, fu = (from.fx*cam.u.x + from.fy*cam.u.y)/m, fr = (from.fx*cam.r.x + from.fy*cam.r.y)/m;
+    const tx = b.f.x1 - from.x, ty = b.f.y1 - from.y, tu = tx*cam.u.x + ty*cam.u.y, tr = tx*cam.r.x + ty*cam.r.y;
+    s.passAt = M.rt; s.passSide = tu*(-fr) + tr*fu > 0 ? 1 : -1;
+  }
+  ART.last = null;
+}
+function artCell(p, s, pose, tier, mine) {                  // his picture at this tier, or null when this frame's tints are spent. The man you run always gets his
+  // the back views carry a number in type, so a mirrored one is baked mirrored; the rest are flipped when drawn
+  const numbered = pose.mirror && artNumbered(ART.man.clips[pose.clip].shape, pose.deg);
+  if (s.aid == null || s.aEpoch !== ART.epoch) { s.aid = ART.next++; s.aEpoch = ART.epoch; }
+  const base = s.aid*16384 + ((ART.ids[pose.clip]*64 + pose.dir*8 + pose.frame)*2 + (numbered ? 1 : 0))*2, key = base + tier;
+  let slot = ART.map.get(key);
+  if (!slot) {
+    if (BV.bakes >= ART_BAKES && !mine) { slot = ART.map.get(base + 1 - tier); if (slot) slot.t = ART.tick; return slot || null; }   // the same picture at the other size is better than an old one
+    BV.bakes++;
+    slot = artBake(p, s, key, pose.row, pose.clip, pose.deg, tier, numbered);
+  }
+  slot.t = ART.tick;
+  return slot;
+}
+function artDraw(at, p, s, kk, sc, ang, pose, mine) {       // draws him where at says, and gives back the slot drawn, or null if nothing can be yet
+  const want = kk*V.dpr > 46 ? 1 : 0, numbered = pose.mirror && artNumbered(ART.man.clips[pose.clip].shape, pose.deg);
+  let slot = artCell(p, s, pose, want, mine), flip = pose.mirror && !numbered;
+  if (!slot && s.artSlot && s.artSlot.key === s.artKey) { slot = s.artSlot; flip = s.artFlip; }   // tints spent: hold his last picture a frame
+  if (!slot) return null;
+  s.artSlot = slot; s.artKey = slot.key; s.artFlip = flip;
+  const c = slot.c, look = lookOf(p), xs = look.b/ART.man.builds[pose.build];
+  ctx.save(); ctx.translate(at.sx, at.sy); ctx.scale(xs*sc, sc); if (ang) ctx.rotate(ang);
+  if (flip) ctx.scale(-1, 1);
+  ctx.drawImage(slot.cv, slot.x, slot.y, c.w, c.h, -c.S.ox*kk, -c.S.oy*kk, c.w/c.T*kk, c.h/c.T*kk);
+  ctx.restore();
+  return slot;
+}
+/* =========================================================
+   The behind views: a 2.5D camera for one-player matches (Low, Mid, High), and Mid is where a new game starts. Top is still there, through its own code: render
    returns here only when behindOn(), and toS's one extra line issues no canvas call. Fixed height and pitch, no yaw, roll, bob or shake:
    only depth and a little lateral follow. Up on the stick is always toward the opposition's line. Nothing here draws a random number.
    ========================================================= */
-settings.cam = 0;                                           // 0 Top, 1 Low, 2 Mid, 3 High
+settings.cam = 2;                                           // 0 Top, 1 Low, 2 Mid, 3 High. The default: load() runs later, and a save holding a cam keeps it (cleanSettings: a Top only if the Camera row chose it)
 const BV_PRESET = [null, { ch:7.5, back:19, fy:0.60 }, { ch:10, back:22, fy:0.58 }, { ch:13, back:25, fy:0.58 }];
 const BV_TIERS = [28, 64];                                  // sprite cells, in device pixels per metre
 const BV_CELL = { stand:{ w:1.4, h:2.3, ox:0.7, oy:2.1 }, lying:{ w:2.6, h:1.2, ox:0.6, oy:0.7 } };   // in T, with the feet at ox, oy: 0.1T clear of the tallest head style
@@ -4785,6 +5102,7 @@ function bvRelease() {                                      // the sprites die w
   if (!BV.M || BV.M === M) return;
   for (const c of BV.cells) c.width = 0;
   BV.cells.length = 0; BV.men = new WeakMap(); BV.order.length = 0; BV.M = null;
+  artClear();
 }
 function bvCam() {
   const W = V.W, H = V.H, t = teamOfSeat(0), d = t < 0 ? 1 : dirOf(t), key = W + 'x' + H + 'x' + settings.cam + 'x' + d;
@@ -4931,6 +5249,7 @@ function bvArmFonts() {                                     // a shirt number ba
     BV.fontsReady = true;
     for (const c of BV.cells) c.width = 0;
     BV.cells.length = 0; BV.men = new WeakMap(); BV.order.length = 0;
+    artClear();
   });
 }
 
@@ -4991,8 +5310,9 @@ function drawManBehind(cam, p, ctrl) {
   if (k && !tackler) ang += (k.tier === 'soft' ? 0.15 : k.tier === 'dom' && k.t/k.T >= 0.4 ? -0.12 : 0)*(s.face);   // a bound carrier leans into a Soft tackle and recoils from a Big Hit
   const view = down ? 3 : s.view, flip = view >= 2 && s.face < 0;
   const place = () => { ctx.save(); ctx.translate(at.sx, at.sy); ctx.scale(look.b*sc, sc); if (ang) ctx.rotate(ang); };   // height, build and lean sit outside the figure, for sprites and live men alike
-  let drawn = false;
-  if (!live) {
+  let drawn = false, pose = null;
+  if (artReady() && (pose = artPose(cam, p, s, k, tackler, carrier, sp, spr))) drawn = !!artDraw(at, p, s, kk, sc, ang, pose, p === ctrl);   // the rendered art, for everyone: the code-drawn man below is what shows until it is in
+  if (!drawn && !live) {
     const want = kk*V.dpr > 40 ? 1 : 0, mine = cellFor(p, s, view, frame, want), other = mine ? null : s.cells[bvCellKey(view, frame, 1 - want)], cell = mine || other;
     if (cell) {
       const shape = down ? BV_CELL.lying : BV_CELL.stand;
@@ -5012,7 +5332,10 @@ function drawManBehind(cam, p, ctrl) {
     const a = p.fendA, l = 0.95*(0.9 + 0.5*(1 - p.fend/0.2)), q0 = pr(cam, s.wx + Math.cos(a)*0.38, s.wy + Math.sin(a)*0.38, 1.3), q1 = pr(cam, s.wx + Math.cos(a)*l, s.wy + Math.sin(a)*l, 1.3);
     if (q0 && q1) { ctx.strokeStyle = M.kit[p.team].trim; ctx.lineWidth = Math.max(2, 0.2*kk); ctx.lineCap = 'round'; seg(q0.sx, q0.sy, q1.sx, q1.sy); }
   }
-  if (carrier) cutBall(at.sx + 0.18*kk*(s.view === 2 ? s.face : 1), at.sy - 1.15*kk*sc, kk*0.95, s.view === 2 ? 0.2*s.face : 1.25);   // straight after him, so a nearer man can cover it
+  if (carrier) {                                             // straight after him, so a nearer man can cover it
+    if (drawn && pose && pose.row.length > 12) { const q = kk/ART.man.px, m = pose.mirror ? -1 : 1, side = pose.deg === 90; cutBall(at.sx + m*pose.row[12]*q*look.b/ART.man.builds[pose.build]*sc, at.sy + pose.row[13]*q*sc, kk*0.95, side ? 0.2*m : pose.deg === 0 || pose.deg === 180 ? 1.25 : 0.7*m); }   // in his hands, as the art holds it
+    else cutBall(at.sx + 0.18*kk*(s.view === 2 ? s.face : 1), at.sy - 1.15*kk*sc, kk*0.95, s.view === 2 ? 0.2*s.face : 1.25);
+  }
   if (alpha < 1) ctx.globalAlpha = 1;
 }
 function groundRing(cam, x, y, radius, style, width, dash) {
@@ -5067,6 +5390,8 @@ function renderBehind(dt) {
   const ctrls = [0, 1].map(t => (isHuman(t) ? ctrlOf(t) : null));
   for (const t of [0, 1]) if (ctrls[t]) groundRing(cam, ctrls[t].x, ctrls[t].y, BV_RING*1.55, ringCol(t), 2.5);
   bvPrepareMen(cam);
+  if (ART.state === 'idle') artLoad();
+  if (artReady()) artPrepare(cam);
   const ctrlHuman = ctrls[0] || ctrls[1];
   for (const p of BV.order) drawManBehind(cam, p, ctrlHuman);
   if (M.career) bvCareerMark(cam);                           // a career match: your player's ring and star, as careerMark draws them on Top
@@ -5149,6 +5474,7 @@ function render(dt) {
   const camX = cam.x + shake*Math.sin(M.rt*173)/s, camY = cam.y + shake*Math.cos(M.rt*131)/s;
   bvRelease();
   if ((BV.on = behindOn())) return renderBehind(dt);
+  if (!BV.M && playing() && (ART.state === 'ready' || ART.state === 'loading')) artFree();   // played without the art, and no behind match to come back to: a flip to Top and back in one match keeps it
 
   ctx.setTransform(d*s, 0, 0, d*s, d*(V.W/2 - s*camX), d*(V.H/2 - s*camY));
   drawPitch();
@@ -5437,6 +5763,7 @@ function placeStick(x, y) {
 }
 function restStick() { const p = stickRest(window.innerWidth, window.innerHeight, safeInsets()); placeStick(p.x, p.y); }
 zone.addEventListener('pointerdown', e => {
+  if (demoOn()) return;                                    // Watch How: the pilot has the stick
   if (M && M.cut && ((M.cut.duel && M.cut.after) || (M.cut.kind === 'goal' && (M.cut.after || M.cut.g.watch)))) input.aPressed = true;   // tap to skip the verdict, or a CPU kick
   setDev('touch');
   if (input.stickId !== null) return;
@@ -5496,6 +5823,7 @@ function nearestAct(x, y) {                                // the button whose c
   return best;
 }
 function beginAct(el, key, e) {
+  if (demoOn()) return;
   if (el._held) return; // one finger owns an action until its own release or cancellation
   if (e && e.preventDefault) e.preventDefault();
   try { if (e && e.pointerId != null) el.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
@@ -5516,7 +5844,7 @@ function bindAct(el, key) {
 }
 for (const [id, key] of ACTS) bindAct($(id), key);
 cv.addEventListener('pointerdown', e => {                 // a tap in the gap falls through to the pitch. If it is within HIT_SLOP of a button, that button takes it
-  if (!playing() || $('controls').hidden) return;
+  if (!playing() || $('controls').hidden || demoOn()) return;
   const hit = nearestAct(e.clientX, e.clientY);
   if (hit) beginAct(hit.el, hit.key, e);
 });
@@ -5574,7 +5902,8 @@ function lightKey(code, on) {                              // the join screen's 
 function lightPad(seat, which, on) { for (const el of document.querySelectorAll('#s-join .seat.s' + seat + ' [data-pad="' + which + '"]')) el.classList.toggle('on', on); }
 function onKey(e, down) {
   const code = e.code, r = keyRoute(code);
-  if (practice && (practice.done || practice.ready) && down && code === 'Escape') { if (e.preventDefault) e.preventDefault(); practiceChoose(); return; }
+  if (demoOn()) { if (down) demoKeyDown(e, r); return; }   // Watch How: Escape or P skips, and nothing else reaches the slots
+  if (practice && (practice.done || practice.ready) && down && code === 'Escape' && !e.repeat) { if (e.preventDefault) e.preventDefault(); practiceChoose(); return; }
   if (e.target && e.target.tagName === 'INPUT') return;    // typing a team name
   if (two.on && r && r[0] != null) lightKey(code, down);
   if (!down) {
@@ -5644,6 +5973,7 @@ function pollPads() {
     const P = padOf(gp), bit = 4 << gp.index, menu = onMenu();
     P.act = gp.vibrationActuator || null;
     if (two.on && P.owner == null) { if (padRise(gp, P)) twoClaim(P); continue; }
+    if (demoOn()) { demoPad(gp, P); continue; }            // Watch How: Start skips, and nothing else reaches the slots
     const seat = padSeat(P), inp = inputs[seat], join = two.on && !$('s-join').hidden;
     const n = P.std ? Math.min(gp.buttons.length, 16) : Math.min(gp.buttons.length, 2);   // a pad with no standard mapping: axes 0/1 and buttons 0/1 only, best effort
     for (let i = 0; i < n; i++) {
@@ -5684,6 +6014,7 @@ function padNav(P, seat, ax, ay, m) {                      // the stick on a men
   navMove(seat, dir === 'r' ? 1 : dir === 'l' ? -1 : 0, dir === 'd' ? 1 : dir === 'u' ? -1 : 0);
 }
 function padStart() {
+  if (demoOn()) { demoSkip(); return; }
   if (practice && (practice.done || practice.ready)) return;                                      // Start: pause and resume, and Second Half on the break card
   if (!playing()) return;
   if (M.paused) resume();
@@ -5802,6 +6133,7 @@ function navPress(seat) {
   return true;
 }
 function navBack(seat) {
+  if (demoOn()) { demoSkip(); return true; }
   if (practice && (practice.done || practice.ready)) { practiceChoose(); return true; }
   logNav('back', seat);
   if (!navOwner(seat)) return false;
@@ -6323,6 +6655,7 @@ $('br-menu').addEventListener('click', () => { $('m-break').hidden = true; exitM
 
 /* pause */
 function pause() {
+  if (demoOn()) { demoStop(); return; }                    // Watch How has no pause card: a hidden app, a lost focus or a turned phone ends it on the ready card, so nothing can stay held or paused
   if (practice && (practice.done || practice.ready)) return;
   if (!playing() || M.over || M.phase === 'break') return;
   M.paused = true;
@@ -6384,6 +6717,7 @@ function renderHome() {
     note.hidden = false;
   } else { $('b-champ').textContent = 'Championship'; note.hidden = true; }
   renderCareerHome();
+  $('home-club').textContent = career && career.club && career.club.name ? 'Play as ' + career.club.name + ' · Support ' + career.club.name : 'Play as Your Team · Support Your Team';   // the club your career began at stays yours when you sign elsewhere
 }
 function goHome() {
   navOnly = null;
@@ -6396,6 +6730,7 @@ for (const seg of document.querySelectorAll('.seg[data-key]')) {
   [...seg.children].forEach((btn, i) => btn.addEventListener('click', () => {
     const key = seg.dataset.key;
     if (key === 'diff') kidsSegSet(i); else if (BOOL[key]) settings[key] = i === 0; else settings[key] = i;
+    if (key === 'cam') settings.camPick = true;              // a real choice, so a Top chosen here survives a reload (cleanSettings)
     if (key === 'hints') settings.coach = settings.hints; // one home switch for control hints and coach tips
     save(); renderHome();
     if (key === 'sound' && settings.sound) ac();
@@ -7647,12 +7982,12 @@ function kidsSwitch(t) {                                   // defending, the rin
   const q = sprintPick(t) || (switchUseful(t) ? switchTarget(t) : null);
   if (q && q !== cur) { setCtrl(t, q); st('kidsSwitch'); }
 }
-function kidsChase(p, inp, dt) {                           // the stick let go while defending: the ringed man chases the carrier, or runs to a kicked or loose ball, as his teammates do
+function kidsChase(p, inp, dt) {                           // the stick let go while defending: the ringed man chases the carrier, or runs to a kicked or loose ball or to where their pass will land, as his teammates do
   if (!M.kids || inp.world().mag >= KIDS.rest || M.phase !== 'play' || p.offside > 0) return false;   // a retiring tackler stays out, as his teammates do
   const b = M.ball;
   let x, y;
   if (b.state === 'held' && b.carrier.team !== p.team) { const c = b.carrier, lead = clamp(dist(p, c)/9, 0, 0.7); x = c.x + c.vx*lead; y = c.y + c.vy*lead; }
-  else if (b.state === 'air' && b.f && b.f.kind !== 'pass') { x = b.f.x1; y = b.f.y1; }
+  else if (b.state === 'air' && b.f && (b.f.kind !== 'pass' || b.f.team !== p.team)) { x = b.f.x1; y = b.f.y1; }
   else if (b.state === 'loose') { x = b.x; y = b.y; }
   else return false;
   seek(p, x, y, maxSpeed(p)*KIDS.chase, 15, dt, true);
@@ -7755,6 +8090,8 @@ window.addEventListener('keydown', e => {                  // while the check is
    play. Every engine hook checks `practice` first, so matches, AI v AI, the demo and the balance tools never reach any of it,
    and nothing here draws a random number outside a drill.
    ========================================================= */
+const DRILL_PACE = { live:0.75 };                           // the Training Ground's one speed lever: a live drill's dt is scaled by this, so its windows, meters and clocks all stretch together. Matches never read it
+const drillRate = () => (!practice ? 1 : practice.demo ? practice.demo.rate : DRILL_PACE.live);   // this step's scale: a match is 1, a live drill the lever, Watch How its own slow motion (drill-demo.js)
 const DRILL_RUN = { acc:16, secs:3, refill:4.5, floor:0.2 };   // a training space's run: pick-up (m/s²), the Sprint meter's seconds of burst, its refill, the least it needs to start
 const drillStarsOf = (score, cuts) => cuts.filter(c => score >= c).length;   // stars: one for each threshold met, 0 to 3
 const drillLerp = (a, b, u) => a + (b - a)*u;
@@ -8582,6 +8919,7 @@ function practiceInstructions(id) {
 }
 function practiceRestore() {
   if (!practice) return;
+  if (practice.demo) demoClean();
   const snapshot = practice.settings;
   for (const key of Object.keys(settings)) delete settings[key];
   Object.assign(settings, snapshot);
@@ -8610,11 +8948,12 @@ function practiceChoose() {
   $('hud').hidden = $('controls').hidden = $('b-pause').hidden = true;
   showScreen('s-practice');
 }
-function practiceStart(id, opts) {
+function practiceStart(id, opts, noDemo) {                 // noDemo: Watch How rebuilding its own drill
   const drill = PRACTICE_DRILLS.find(d => d.id === id); if (!drill) return;
   const kit = DRILL_KIT[id];
   const keep = opts && typeof opts.onDone === 'function' ? opts : null;
   practiceRestore(); releaseAll(); setTwo(false); lockLandscape(); ac();
+  const firstTime = !settings.drillSeen.includes(id) && !noDemo;   // Watch How plays the first time this device opens the drill, until it has really been seen (demoMark)
   practice = { ...drill, opts:keep, best:null, settings:JSON.parse(JSON.stringify(settings)), elapsed:0, done:false, switched:false, completedPass:false, stars:0, won:false, space:false, cam:null, cueKey:'', role:null };
   // Existing hints remain available; first-time tutorial cards and coach memory belong to normal matches.
   settings.tut = TUT_IDS.slice(); settings.coach = false;
@@ -8635,11 +8974,13 @@ function practiceStart(id, opts) {
   $('pr-result').textContent = drill.name; $('pr-feedback').textContent = practiceInstructions(id);
   $('pr-stars').hidden = true;
   $('pr-roles').hidden = !drill.roles; $('pr-retry').hidden = !!drill.roles;
+  $('pr-watch').hidden = false; $('pr-go').classList.toggle('one', !!drill.roles);
   $('pr-retry').textContent = 'Start Drill'; $('pr-next').hidden = true;
   practiceLeaveLabel();
   $('m-practice').hidden = false; $('controls').hidden = true; $('b-pause').hidden = true;
   const first = drill.roles ? $('pr-runner') : $('pr-retry');
   if (first.focus) first.focus();
+  if (firstTime) demoStart();
 }
 function practiceLeaveLabel() {                            // Back to Training on its own row, or beside Next Drill; a caller's drill goes Back to Career unless it names its own
   $('pr-select').textContent = practice.opts ? (practice.opts.leaveLabel || 'Back to Career') : 'Back to Training';
@@ -8647,6 +8988,7 @@ function practiceLeaveLabel() {                            // Back to Training o
 }
 function practiceGo() {                                    // the ready card's Start: the drill runs
   practice.ready = false; M.paused = false; releaseAll();
+  demoMark();                                              // started by hand: no demo on its next open
   for (const inp of inputs) inp.aPressed = inp.bPressed = inp.cPressed = false;
   $('m-practice').hidden = true; $('controls').hidden = false; $('b-pause').hidden = false;
   $('practice-cue').hidden = !(practice.id === 'defend' || practice.id === 'pass');
@@ -8654,10 +8996,12 @@ function practiceGo() {                                    // the ready card's S
 }
 function practiceFinish(won, feedback, stars) {
   if (!practice || practice.done) return;
+  if (practice.demo) { demoEnd(!!won); return; }           // Watch How records nothing: no stars, no best, no card
   stars = stars == null ? (won ? 3 : 0) : clamp(Math.round(stars), 0, 3);
   practice.ready = false; practice.done = true; practice.won = !!won; practice.stars = stars; M.paused = true;
   if (practice.opts) practice.best = practiceBest(practice.best, practiceResult(practice));   // taken now, while the run (its role included) is as shown
   $('pr-retry').textContent = 'Try Again'; $('pr-retry').hidden = false; $('pr-roles').hidden = true;
+  $('pr-watch').hidden = true; $('pr-go').classList.add('one');
   $('pr-next').hidden = !!practice.opts;                   // a caller picks the next drill itself
   practiceLeaveLabel();
   $('pr-result').textContent = won ? 'Well Played' : 'Have Another Go';
@@ -8674,7 +9018,7 @@ function practiceTick(dt) {
   const kit = DRILL_KIT[practice.id];
   if (kit.tick) kit.tick(dt);
   if (!practice || practice.done) return;
-  if (kit.cue) { const c = kit.cue(); if (c) drillCue(c[0], c[1]); else drillCue('', ''); }
+  if (kit.cue && !practice.demo) { const c = kit.cue(); if (c) drillCue(c[0], c[1]); else drillCue('', ''); }
   if (practice.elapsed >= practice.limit) {
     if (kit.timeUp) kit.timeUp();
     else practiceFinish(false, 'Try again: ' + practice.cue, 0);
@@ -8694,8 +9038,263 @@ for (const role of ['runner', 'passer']) $('pr-' + role).addEventListener('click
   DRILL_KIT[practice.id].role(role);
   practiceGo();
 });
+$('pr-watch').addEventListener('click', () => { if (practice && practice.ready) demoStart(); });
 $('pr-next').addEventListener('click', () => practiceStart(PRACTICE_DRILLS[(PRACTICE_DRILLS.findIndex(d => d.id === practice.id) + 1) % PRACTICE_DRILLS.length].id, practice.opts));
 $('pr-select').addEventListener('click', practiceChoose);
+/* =========================================================
+   Watch How: the game plays a drill itself, in slow motion, and shows the real controls being used.
+   It runs the real drill: a small scripted pilot, one a drill, writes the stick and the buttons on the same input object a
+   thumb or a key writes (btn() with its own source bit), so it can't drift from the rules, and it draws no random number of
+   its own. It plays one good rep or round, then rebuilds the drill and ends on the ready card, so Start Drill is a clean run.
+   Nothing is recorded: practiceFinish stops here, and the stats it wrote go with the thrown-away match. Real input is ignored.
+   There is no pause: a hidden app, a lost focus or a turned phone drops to the ready card, so nothing can stay held or paused.
+   The one automatic play is used up only by DEMO.seen seconds of watching, its end, Skip, or Start Drill: an interruption before that leaves it for the next open.
+   ========================================================= */
+const DEMO = { rate:0.4, slow:0.25, ease:5, cap:75, tap:0.22, linger:1.2, seen:4, bit:1 << 20 };   // the pace and the slow pace at the moment that matters; rate's easing a second; the wall-clock cap; a tap's and the closing hold's real seconds; real seconds of watching that use up the automatic play; this source's bit in inp.src
+let demoLast = null;                                       // how the last one ended, for the tools: { id, ok, why, wall, marks }
+const demoOn = () => !!(practice && practice.demo);
+const demoKey = act => (lastDev === 'pad' ? { a:'Bottom Button', b:'Right Button', c:'Shoulder', m:'Stick' }[act] : seatKey(0, act));
+const demoName = (word, act) => word + (lastDev === 'touch' ? '' : ' (' + demoKey(act) + ')');   // a button's name, with its key or pad button off a touch screen
+const demoMove = () => (lastDev === 'kb' ? 'Press ' + demoKey('m') : 'Push the stick');
+function demoStart() {
+  if (!practice || !practice.ready) return;
+  practice.ready = false; M.paused = false; releaseAll();
+  practice.demo = { rate:DEMO.rate, wall:0, began:0, tries:1, cap:DEMO.cap, x:0, y:0, want:{ a:false, b:false, c:false }, tapT:{ a:0, b:0, c:0 }, slow:false, out:null, left:0, title:'', line:'', marks:{}, n:{},
+    step(title, line) { this.title = title; this.line = line; }, go(x, y) { const m = hyp(x, y); this.x = m > 1 ? x/m : x; this.y = m > 1 ? y/m : y; }, hold(k) { this.want[k] = true; }, tap(k) { if (this.tapT[k] <= 0) this.tapT[k] = DEMO.tap; }, mark(k) { if (this.marks[k] == null) this.marks[k] = this.rate; }, end(ok) { demoEnd(ok); } };
+  $('m-practice').hidden = true; $('controls').hidden = false; $('b-pause').hidden = true; $('drill-hud').hidden = true; $('practice-cue').hidden = true;
+  $('controls').classList.add('demo'); if (document.body) document.body.classList.add('drill-demo');
+  $('drill-demo').hidden = false; $('demo-skip').hidden = false; $('demo-step').textContent = ''; $('demo-cap').textContent = '';
+  setFocus(null); lastBtn = ''; restStick();
+  const skip = $('demo-skip'); if (skip.focus) skip.focus();
+  demoStep(0);
+}
+function demoMark() {                                      // this device has seen this drill's demo. save() stands down in a drill, so the snapshot, the settings it puts back, is what is written
+  const p = practice, s = p.settings;
+  if (s.drillSeen.includes(p.id)) return;
+  s.drillSeen = DRILL_IDS.filter(d => d === p.id || s.drillSeen.includes(d));
+  saveWith(s);
+}
+function demoStep(raw) {                                   // a real step, before the world's: true holds the world still
+  const D = practice.demo;
+  if (raw && uprightPhone.matches) return true;            // opened with the phone upright: it waits behind the Turn Your Phone cover
+  D.wall += raw;
+  if (D.wall >= DEMO.seen) demoMark();
+  if (D.out) {                                             // the good rep is done: hold the picture a moment
+    D.left -= raw; demoCaption(D);
+    if (D.wall >= D.cap) demoFinish(false, 'cap');
+    else if (D.left <= 0) { if (D.out.ok) demoFinish(true, 'end'); else demoAgain(D); }
+    return true;
+  }
+  if (D.wall >= D.cap) { demoFinish(false, 'cap'); return true; }
+  D.x = D.y = 0; D.want.a = D.want.b = D.want.c = false; D.slow = false;
+  DEMO_PILOT[practice.id](D, Math.max(raw, STEP)*D.rate);
+  if (!practice.demo || D.out) { demoRelease(D); demoSync(); return true; }
+  D.rate += ((D.slow ? DEMO.slow : DEMO.rate) - D.rate)*(1 - Math.exp(-raw*DEMO.ease));
+  input.jx = D.x; input.jy = D.y;
+  for (const k of ['a', 'b', 'c']) { if (D.tapT[k] > 0) D.tapT[k] -= raw; btn(input, k, DEMO.bit, D.want[k] || D.tapT[k] > 0); }
+  demoCaption(D); demoSync();
+  return false;
+}
+function demoCaption(D) {                                  // written only when it changes (it is a polite live region)
+  if ($('demo-step').textContent !== D.title) $('demo-step').textContent = D.title;
+  if ($('demo-cap').textContent !== D.line) $('demo-cap').textContent = D.line;
+}
+function demoSync() {                                      // the ghost: the real stick's knob where the input says, with a thumb on it; each real button lit with a finger on it for exactly as long as it is down
+  const x = input.jx, y = input.jy, moved = hyp(x, y) > 0.01;
+  knob.style.transform = moved ? `translate(${x*STICK_R}px,${y*STICK_R}px)` : '';
+  knob.classList.toggle('lit', moved); stick.classList.toggle('on', moved);
+  for (const [id, key] of ACTS) $(id).classList.toggle('lit', !!input[key + 'Down']);
+}
+function demoRelease(D) { input.jx = input.jy = 0; D.tapT.a = D.tapT.b = D.tapT.c = 0; for (const k of ['a', 'b', 'c']) btn(input, k, DEMO.bit, false); }
+function demoEnd(ok) {                                     // the pilot is done, or the drill ended itself: let go and hold the picture
+  const D = practice.demo; if (!D || D.out) return;
+  demoRelease(D);
+  D.out = { ok }; D.left = DEMO.linger; D.step(ok ? 'Now You Try' : 'Missed', ok ? 'That is how it is done.' : 'Even good players miss. One more look.');
+  demoCaption(D); demoSync();
+}
+function demoAgain(D) {                                    // the rules said no (a dive is never certain): the same drill freshly built, and the pilot goes again until the cap
+  const p = practice, best = p.best, wall = D.wall, tries = D.tries + 1;
+  practiceStart(p.id, p.opts, true);
+  if (!practice) return;
+  practice.best = best;
+  demoStart();
+  if (practice.demo) { practice.demo.wall = practice.demo.began = wall; practice.demo.tries = tries; }   // began: a retry shows its steps at the pace the first try did
+}
+function demoFinish(ok, why) {                             // back to a freshly built drill on its ready card
+  const p = practice, D = p.demo; if (!D) return;
+  demoLast = { id:p.id, ok:!!ok, why, wall:D.wall, tries:D.tries, marks:D.marks };
+  if (why !== 'stop') demoMark();
+  const best = p.best;
+  practiceStart(p.id, p.opts, true);
+  if (practice) practice.best = best;
+}
+function demoSkip() { if (demoOn()) demoFinish(false, 'skip'); }   // the player said no more: Skip, Escape, or Start on a pad
+function demoStop() { if (demoOn()) demoFinish(false, 'stop'); }   // the phone or the browser interrupted: that is not having seen it
+$('demo-skip').addEventListener('click', demoSkip);
+function demoClean() {                                     // every way out goes through here (practiceRestore): the overlay, the ghost and anything the pilot held
+  practice.demo = null;
+  $('drill-demo').hidden = true; $('demo-skip').hidden = true;
+  $('controls').classList.remove('demo'); if (document.body) document.body.classList.remove('drill-demo');
+  knob.classList.remove('lit'); knob.style.transform = ''; stick.classList.remove('on');
+  for (const [id] of ACTS) $(id).classList.remove('lit');
+  for (const inp of inputs) { inp.flick = 0; inp.pre = null; inp.latch = false; inp.held.clear(); }
+  releaseAll(); lastBtn = '';
+}
+function demoKeyDown(e, r) {
+  if (r) setDev('kb');
+  if (e.code === 'Escape' || e.code === 'KeyP') { if (e.preventDefault) e.preventDefault(); if (!e.repeat) demoSkip(); }
+  else if (r && e.preventDefault) e.preventDefault();      // Space can't press the focused Skip
+}
+function demoPad(gp, P) {                                  // the pad's edges are still tracked, so a button held through it can't fire afterwards. Only Start skips: a caption names every other button, and a child copying it must not lose the demo. A pad with no Start plays it through
+  const n = P.std ? Math.min(gp.buttons.length, 16) : Math.min(gp.buttons.length, 2);
+  let skip = false;
+  for (let i = 0; i < n; i++) {
+    const was = !!P.b[i], now = padDown(gp.buttons[i], i, was);
+    if (now === was) continue;
+    P.b[i] = now;
+    if (now) { setDev('pad'); if (i === BMAP.start) skip = true; }
+  }
+  if (skip) demoSkip();
+}
+
+/* ---------- the pilots ----------
+   Each reads the drill as a player reads the screen and says, step by step, what the thumb and the fingers do. dt is the drill
+   time this step will take. A rep that goes wrong just rolls on to the drill's next rep; a drill with only one (Defend, Two-on-One)
+   is built afresh and goes again. Its rules are never bent: a dive is about two in three, for the pilot as for anyone. */
+function demoEggSpot(E) {                                  // where to stand: the first point on the ball's flight within reach in time, or its bounce
+  const b = M.ball, me = E.me, K = DRILL_EGG, v = maxSpeed(me)*0.8;
+  let x = b.x, y = b.y, z = b.z, vz = b.vz;
+  for (let t = 0; t < 3.5; t += 1/60) {
+    vz -= 9.8/60; x += b.vx/60; y += b.vy/60; z += vz/60;
+    if (z <= 0) return { x, y };
+    if (z > K.lo + 0.1 && z < K.hi - 0.1 && hyp(x - me.x, y - me.y) - K.reach*0.6 <= v*t) return { x, y };
+  }
+  return { x, y };
+}
+const demoMissed = () => !!M.stats.tier_broken;              // Defend: the dive went in and the runner broke it
+const demoToward = (D, me, x, y, near) => { const dx = x - me.x, dy = y - me.y, m = hyp(dx, dy); if (m > (near || 0.15)) D.go(dx/m*Math.min(1, m/0.8), dy/m*Math.min(1, m/0.8)); };
+const DEMO_PILOT = {
+  egg(D) {
+    const E = practice.egg, me = E.me, b = M.ball;
+    if (E.caught) { D.step('Caught', 'Caught it. Keep your eyes on the ball.'); if (E.t >= 0.3) D.end(true); return; }
+    if (E.stage !== 'fly') { D.step('Watch', 'Watch the thrower. You only know the throw when it comes.'); return; }
+    const at = demoEggSpot(E);
+    D.step('Run', demoMove() + ' to run to the ball. Watch its shadow.');
+    demoToward(D, me, at.x, at.y);
+    if (hyp(me.x - b.x, me.y - b.y) < 5) D.slow = true;
+  },
+  circle(D, dt) {
+    const C = practice.circle;
+    if (C.role === 'runner') {
+      if (C.survived >= 1) {                               // the round is won: now the same round as the passer
+        D.step('Runner', 'Home first. Now the passer.');
+        if (C.t >= 0.5) { C.round = 1; C.survived = 0; DRILL_KIT.circle.role('passer'); }
+        return;
+      }
+      if (C.stage === 'start') { D.slow = true; D.step('Runner', 'Tap ' + demoName('Pass', 'a') + ' to start.'); if (C.t >= 0.5) D.tap('a'); return; }
+      if (C.stage !== 'race' || C.home) return;
+      const at = circleRunAt(C.R, C.s);                    // the thumb goes round with the runner
+      D.go(-Math.sin(at.a), Math.cos(at.a));
+      if (C.s > C.L*0.6) { D.hold('c'); D.step('Runner', 'Hold ' + demoName('Sprint', 'c') + ' to go faster.'); }
+      else D.step('Runner', demoMove() + ' to run round the outside.');
+      return;
+    }
+    if (C.survived >= 1) { D.step('Passer', 'You beat the runner.'); D.end(true); return; }
+    if (C.stage === 'start') { D.slow = true; D.step('Passer', 'Tap ' + demoName('Pass', 'a') + ' to start.'); if (C.t >= 0.4) D.tap('a'); return; }
+    D.step('Passer', 'Tap ' + demoName('Pass', 'a') + ' as the white ring meets the gold.');
+    if (C.hold) { D.slow = true; if (C.hold.t + dt >= C.hold.tc) D.tap('a'); }
+  },
+  cones(D) {
+    const Q = practice.cones, K = DRILL_CONES, me = Q.me;
+    const route = D.route || (D.route = [...K.gates.slice(0, K.out).map(([x, y]) => [x + 0.5, y]), [K.turn[0] + 2, K.turn[1] - 3], [K.turn[0] + 2, K.turn[1] + 2], ...K.gates.slice(K.out).map(([x, y]) => [x - 0.5, y]), [K.line - 3, 46]]);
+    let i = D.i || 0;
+    if (i < route.length - 1 && hyp(route[i][0] - me.x, route[i][1] - me.y) < 1.2) i = D.i = i + 1;
+    const dx = route[i][0] - me.x, dy = route[i][1] - me.y, m = hyp(dx, dy) || 1;
+    D.go(dx/m, dy/m);
+    if (i > K.out + 1) { D.hold('c'); D.step('Sprint', 'Hold ' + demoName('Sprint', 'c') + ' on the straight home.'); }
+    else if (i >= K.out) D.step('The Flag', 'Run round the flag.');
+    else D.step('The Gates', demoMove() + ' to run through every gate.');
+  },
+  tackle(D, dt) {
+    const T = practice.tackle, K = DRILL_TACKLE, me = T.me, aim = (K.height[0] + K.height[1])/2;
+    const s = T.stage;
+    if (T.made) { D.step('Great Tackle', 'Set, aim, let go on the gold, squeeze.'); if (s === 'show' && T.t >= 1) D.end(true); return; }
+    if (s === 'approach' || s === 'past') {
+      D.step('Step 1 of 4: Set', demoMove() + ' to get in the runner’s path. Then stand still.');
+      const dy = T.lane - me.y;
+      if (Math.abs(dy) > 0.15) D.go(0, Math.max(-1, Math.min(1, dy*0.7)));
+    } else if (s === 'side') {
+      D.slow = true;
+      const aimed = Math.abs(T.h - aim) <= 0.015;
+      if (!aimed) D.go(0, T.h > aim ? 1 : -1);
+      if (aimed || T.d < 3.4) D.n.pressed = true;
+      if (!D.n.pressed) D.step('Step 2 of 4: Aim', demoMove() + ' down to aim at the thighs.');
+      else {
+        D.step('Step 3 of 4: Hold and Let Go on the Gold', 'Hold ' + demoName('Tackle', 'a') + '. Let go on the gold.');
+        if (T.d - K.run*dt > (K.zone[0] + K.zone[1])/2) D.hold('a'); else D.mark('release');
+      }
+    } else if (s === 'lunge') { D.slow = true; D.step('Step 3 of 4: Hold and Let Go on the Gold', 'Let go. Now the tackle.'); }
+    else if (s === 'squeeze') {
+      D.slow = true; D.n.pressed = false; D.mark('squeeze');
+      D.step('Step 4 of 4: Squeeze', 'Hold ' + demoName('Squeeze', 'a') + ' to bring them down.');
+      if (T.t >= 0.08) D.hold('a');
+    } else { D.n.pressed = false; if (s === 'down') { D.slow = true; D.step('Step 4 of 4: Squeeze', 'They are down.'); } }
+  },
+  kick(D, dt) {
+    const c = M.cut, g = c && c.kind === 'goal' ? c.g : null;
+    if (!g || g.watch) return;
+    if (g.judged) { if (g.ok) { D.step('Over', 'Over the bar.'); D.end(true); } else D.step('Wide', 'Another one.'); D.n.steer = 0; return; }
+    if (c.t <= CUT_IN) { D.step('Aim', 'Line up the arrow with the posts.'); return; }
+    if (g.stage === 'aim') {
+      const ideal = aimFor(g, g.ctr), steer = D.n.steer || 0, want = steer === 0 ? ideal + 0.07 : ideal, err = want - g.aim;   // a calm first kick needs no aim, so the thumb shows it anyway: out a little, and back on line
+      D.step('Aim', demoMove() + ' to steer the arrow to the posts.');
+      if (Math.abs(err) >= 0.004) { D.go(Math.sign(err)*Math.max(0.2, Math.min(1, Math.abs(err)/0.05)), 0); return; }
+      D.n.steer = steer + 1;
+      if (steer) { D.slow = true; D.hold('a'); }
+    } else if (g.stage === 'power') {
+      D.slow = true;
+      D.step('Kick', 'Hold ' + demoName('Kick', 'a') + '. Let go in the gold.');
+      if (g.pt + dt < g.ctr*g.fill) D.hold('a'); else D.mark('release');
+    } else D.step('Kick', 'Watch it fly.');
+  },
+  scrum(D) {
+    const R = practice.drive, c = M.cut;
+    if (R.won) { D.end(true); return; }
+    if (!c || c.kind !== 'scrum' || c.result) return;
+    if (c.t < SCRUM_SET - 0.3) { D.step('Wait', 'Crouch, Bind, Set. Wait for Set.'); return; }
+    if (c.t < SCRUM_SET + 0.12 && !c.hit[0]) { D.slow = true; D.mark('set'); D.step('Hit', 'Tap ' + demoName('Push', 'a') + ' on Set.'); if (c.t >= SCRUM_SET - 0.02) D.tap('a'); return; }
+    D.step('Drive', 'Keep tapping ' + demoName('Push', 'a') + ' as fast as you can.');
+    if (c.t >= (D.n.next || 0)) { D.tap('a'); D.n.next = c.t + 1/7; }
+  },
+  defend(D) {
+    const me = ctrlOf(0), b = M.ball, c = b.state === 'held' ? b.carrier : null;
+    if (!practice.switched) { D.slow = true; D.step('Switch', 'Tap ' + demoName('Switch', 'b') + ' to pick the defender in front.'); if (D.wall - D.began >= 1.5) D.tap('b'); return; }
+    if (demoMissed()) { D.end(false); return; }
+    if (!me || !c || c.team !== 1) return;
+    demoToward(D, me, c.x + c.vx*0.25, c.y + c.vy*0.25, 0.05);   // to where the runner is going
+    if (dist(me, c) < 6) D.slow = true;
+    if (canDive(me) && dist(me, c) < 1.5) { D.mark('tackle'); D.step('Tackle', 'Tap ' + demoName('Tackle', 'a') + ' to stop the runner.'); D.tap('a'); }
+    else {
+      D.step('Run', demoMove() + ' to the runner. Hold ' + demoName('Sprint', 'c') + ' to catch them.');
+      D.hold('c');
+    }
+  },
+  pass(D) {
+    const me = ctrlOf(0), b = M.ball, def = M.players.find(p => p.team === 1);
+    if (practice.completedPass) {
+      D.step('Score', demoMove() + ' to run for the try line.');
+      if (me && def) { D.go(1, dist(me, def) < 6 && def.x >= me.x - 1 ? (me.y >= def.y ? 0.7 : -0.7) : 0); D.hold('c'); }   // round the defender, then straight home
+      return;
+    }
+    if (b.state !== 'held') { D.slow = true; D.go(1, 0); D.step('Pass', 'The ball goes to the runner with the dashed ring.'); return; }
+    if (b.carrier !== me || !def) return;
+    D.go(1, 0);
+    if (dist(me, def) > 5) { D.step('Draw', demoMove() + ' to run at the defender and draw them in.'); return; }
+    D.slow = true; D.mark('pass');
+    D.step('Pass', 'Tap ' + demoName('Pass', 'a') + ' before they reach you.');
+    D.tap('a');
+  },
+};
 /* =========================================================
    Career screens: the new player, the hub, training, the table and the season's end.
    The rules are in src/career.js; nothing here draws a random number except through it.
@@ -9004,7 +9603,7 @@ function frame(now) {
       if (n >= 5) acc = 0;
     }
   }
-  render(dt);
+  render(practice ? dt*drillRate() : dt);                    // the strides and fading tags keep a drill's pace
   updateHud();
   requestAnimationFrame(frame);
 }
@@ -9032,7 +9631,7 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
     DUEL_SLOW, TDUEL, cutRate, CUT_IN, hintFor, hintShown:() => hintShown, hintOpen:() => HO, hintsOn, setHints, syncHints, hintDev, chipHtml, keycapsFor, renderHintSwitches, tutCards, tutHtml, tutStart, tutAdvance, tutPlay, tut:() => (M ? M.tut : null), tutSeen, tutMark, tutReset, tutMoment, tutSeatOf, TUT_IDS, OPEN_HINTS, placeStick, platesFloor, safeInsets, stickRest, tagBox, nearestAct, releaseTouch, phoneUpright, coachTick, coachClear, coachLast:() => coachLast, COACH_IDS, COACH_LINE },
   contact:{ CONTACT, RUCK, SPRINT, commitTackle, resolveContact, contactStep, releaseBind, joinTackle, tackle, resolveRuck, tackleChecks, userTackle, canDive, canOffload, offload, looseInContact, collide, moveAll, wrongFoot, tackleChance,
     maxSpeed, sprintLevel, sprintable, sprintPress, sprintPick, sprintOn, sprintTick, bestChaser, cpuSprintWant, cleanThrough, ahead, gapAhead, offloadTarget, switchTarget, switchUseful, switchPlayer, computeTargets, commitPoint, COVER, drawPos, tag, isHuman, ctrlOf, levelOf,
-    LONG, pickReceiver, pickLong, passAim, shownPass, passOrBlock, doPass, blockSpec, RUNON, SUPPORT, openShoulder, shoulderPoint, holdShoulder, runOn, leadPass, runOnTarget, passPace, passSpeed, handleUser, userStep,
+    LONG, pickReceiver, pickLong, passAim, shownPass, passOrBlock, doPass, blockSpec, RUNON, PASS_FLIGHT, SUPPORT, openShoulder, shoulderPoint, holdShoulder, runOn, leadPass, runOnTarget, passPace, passSpeed, handleUser, userStep,
     MOVES, gestureStep, sideStep, dummyPass, pressure },
   kick:{ KICK, CAM, toFrame, toWorld, frameVec, makeGoal, goalOf, windNow, makeWind, kickWind, launchOf, posAt, velAt, crossOf, judgeCross, scores, curlOf, clearPower, aimFor, bandOf, strikeGoal, cpuKickInputs, gradeOf, verdictOf, layoutOf, kickCam, kickPose, ballAt, kickView, verdictLow, pr, cutTitle, goalLabels,
     dropZone, projectHold, holdSteps, holdLead, kickLabel, rushersOf, rushAt, blockedBy, startDropCut, applyDrop, stopSpot, stageDrop, cpuDrop, cpuDropStrike, cpuDropOffer, kickBall, kickScene },
@@ -9042,15 +9641,16 @@ window.__tryline = { practice:{ start:practiceStart, choose:practiceChoose, leav
   stamina:{ STAMINA, ABILITIES, BUDGET, staminaOf, abilityOf, staminaLasts, staminaFade, staminaPace, powerOf, staminaOn, cleanSide, startScrum, autoScrum, openBuilder, renderBuilder, draft:() => draft },
   career:{ create:careerCreate, start:careerStart, clean:cleanCareer, get:() => career, set:c => { career = c; }, newSeason:careerNewSeason, outcome:careerOutcome, advance:careerAdvance, end:careerEnd, trainDone:careerTrainDone, train:careerTrain, drills:careerDrills, play:careerPlay, arm:careerArm, record:careerRecordResult, natOf:careerNatOf, ability:careerAbility, natFor:careerNatFor, overall:careerOverall, skills:careerSkills, teamFor:careerTeamFor, opponents:careerOpponents, deedGains:careerDeedGains, fade:careerFade, sprintDrain:careerSprintDrain, open:careerOpen, newOpen:careerNewOpen, render:renderCareer, renderEnd:renderCareerEnd, restart:careerRestart, renderTrain:renderCareerTrain, renderTable:renderCareerTable, renderHome:renderCareerHome, last:() => careerLast, drillIds:() => PRACTICE_DRILLS.map(d => d.id), scoreGoal, mark:careerMark, STAGES:CAREER_STAGES, COUNTIES:CAREER_COUNTIES, TRAIN:CAREER_TRAIN, DRILL_SKILL:CAREER_DRILL_SKILL, DEED_CAP:CAREER_DEED_CAP, POS:CAREER_POS, SHADE:CAREER_SHADE },
   importer:{ url:importUrl, parse:importParse, read:importRead, fetch:importFetch, doc:importDoc, fit:importFit, focusEl:importFocusEl, ABILITIES, name:importName, personal:importPersonal, short:importShort, same:importSame, sides:importSides, save:importSave, clean:cleanImportLeague, others:importOthers, teams:importTeams, card:importCard, open:importOpen, go:importGo, run:importRun, alt:importAlt, render:importRender, state:() => importUi, league:() => importLeague, setLeague:v => { importLeague = v; }, http:importHttp, gate:importGate, setGate:f => { importGateHook = f; }, POOL:IMPORT_POOL, MAX_REQUESTS:IMPORT_MAX_REQUESTS, MAX_SIDES:IMPORT_MAX_SIDES, UA:IMPORT_UA, SOURCES:IMPORT_SOURCES, MSG:IMPORT_MSG },
-  drills:{ DRILLS:PRACTICE_DRILLS, KIT:DRILL_KIT, start:practiceStart, state:() => practice, result:practiceResult, starsOf:drillStarsOf, RUN:DRILL_RUN, EGG:DRILL_EGG, CIRCLE:DRILL_CIRCLE, CONES:DRILL_CONES, TACKLE:DRILL_TACKLE, KICKS:DRILL_KICKS, DRIVE:DRILL_DRIVE, QUICK:DRILL_QUICK, circleLap, circleRunAt, circleSpot, eggThrow, tackleMeterBox, labels:drillLabels, hudSync:drillHudSync, icons:DRILL_ICONS },
+  drills:{ PACE:DRILL_PACE, rate:drillRate, DEMO, demoStart, demoSkip, demoStop, demoLast:() => demoLast, DRILL_IDS, DRILLS:PRACTICE_DRILLS, KIT:DRILL_KIT, start:practiceStart, state:() => practice, result:practiceResult, starsOf:drillStarsOf, RUN:DRILL_RUN, EGG:DRILL_EGG, CIRCLE:DRILL_CIRCLE, CONES:DRILL_CONES, TACKLE:DRILL_TACKLE, KICKS:DRILL_KICKS, DRIVE:DRILL_DRIVE, QUICK:DRILL_QUICK, circleLap, circleRunAt, circleSpot, eggThrow, tackleMeterBox, labels:drillLabels, hudSync:drillHudSync, icons:DRILL_ICONS },
   kids:{ KIDS, KIDS_WORDS, KIDS_GATE, KIDS_ASKS, kidsLevel, segIndex:kidsSegIndex, segSet:kidsSegSet, parentGate, gate:() => kidsGate, type:kidsGateType, del:kidsGateDelete, close:kidsGateClose, rest:() => kidsGateRest, wake:kidsGateWake, strike:kidsStrike, diffOf, catchBall, steerAim, startScrum, startLineout, kidsSwitch, kidsChase },
-  behind:{ BV, BV_CELL, behindOn, stickTurn, keyFwd, dprMax, toS, lookOf, cleanLook, paintMan, dirKeyHeld, ringCol, C, LOOK_SKIN, LOOK_HAIR, paintState:() => ({ ctx, SKIN, HAIR }) },
+  behind:{ BV, BV_CELL, ART, ART_STEP, artReady, artInstall, artOff, artLoad, artClear, artFree, artStepped, artPose, artSprite, artSlot, artClass, artLut, behindOn, stickTurn, keyFwd, dprMax, toS, lookOf, cleanLook, paintMan, dirKeyHeld, ringCol, C, LOOK_SKIN, LOOK_HAIR, paintState:() => ({ ctx, SKIN, HAIR }) },
   get M() { return M; } };
 
 function start(data) {
   load();
   if (data && ('champ' in data || data.settings || data.custom || 'champHistory' in data || 'seasonSerial' in data || 'career' in data || 'importLeague' in data)) restore(data);
   resize(); setDesk();
+  if (settings.cam > 0) setTimeout(artLoad, 0);             // the sprites load in the background; the code-drawn men play until they are in, or if they never come
   window.addEventListener('resize', () => { resize(); if (input.stickId === null) restStick(); if (!$('s-teams').hidden) fitNames(); });
   window.addEventListener('orientationchange', () => { unzoom(); setTimeout(() => { resize(); if (input.stickId === null) restStick(); }, 300); });
   if (window.visualViewport) window.visualViewport.addEventListener('resize', unzoom);
