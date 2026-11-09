@@ -30,6 +30,8 @@
     <i class="stag s1" id="h-t1" hidden>2</i>
   </div>
   <div class="sub" id="h-sub">00:00</div>
+  <div class="bstat" id="h-stat" hidden><i id="h-stat-i"></i><span id="h-stat-w"></span></div>
+  <div class="bcap" id="h-cap" hidden><span><i class="star"></i>Star: Your Player.</span> <span><i class="ring"></i>Ring: Who You Control.</span></div>
 </div>
 <button class="pause" id="b-pause" aria-label="Pause" hidden></button>
 <div class="hc" id="hc0" hidden><div class="hc-head"><div class="hc-tt"><b class="hc-title" id="hc0-t"></b><span class="hc-rule" id="hc0-r"></span></div><button class="hc-tick" id="ht0" aria-label="Hints Off"><i></i><span>Hints</span></button></div><div class="hc-rows" id="hc0-b"></div></div>
@@ -53,6 +55,11 @@
       <p class="eyebrow home-club" id="home-club">Play as Your Team · Support Your Team</p>
       <p class="eyebrow home-tagline">Grassroots to Global</p>
     </header>
+    <div class="home-icons">
+      <button class="btn ico-btn" id="b-cam" aria-label="Camera: Mid"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3.5L9 5.5h6L16.5 8H20a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg><span id="b-cam-w">Mid</span></button>
+      <button class="btn ico-btn" id="b-half" aria-label="Half Length: 2 Min"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg><span id="b-half-w">2 Min</span></button>
+    </div>
+    <div class="home-side">
     <div class="stack">
       <button class="btn primary" id="b-quick" autofocus>Quick Match</button>
       <div class="row2 home-row">
@@ -71,19 +78,29 @@
         <button class="btn" id="b-practice">Training Ground</button>
       </div>
     </div>
+    <section class="yt" id="yt-panel" aria-label="Your Team">
+      <div class="yt-id">
+        <span class="yt-shirt" id="yt-jersey"></span>
+        <div class="yt-who">
+          <div class="yt-top"><p class="eyebrow" id="yt-eyebrow">Your Team</p><span id="yt-stars"></span></div>
+          <h2 class="yt-name" id="yt-name" data-fit></h2>
+          <p class="yt-line" id="yt-league" hidden></p>
+          <p class="yt-line" id="yt-record" hidden></p>
+        </div>
+      </div>
+      <div class="yt-row"><button class="btn" id="yt-play"></button><button class="btn" id="yt-change">Change Team</button></div>
+    </section>
     <div class="app-tools" id="app-tools" hidden>
       <span id="offline-status" role="status" hidden>Offline Ready</span>
       <button class="app-action" id="b-install" hidden>Install Game</button>
       <button class="app-action" id="b-update" hidden>Update Game</button>
     </div>
     <details class="cabinet home-cabinet" id="home-cabinet"><summary>Trophy Cabinet</summary><div id="home-history"></div></details>
+    </div>
     <div class="settings">
       <div class="set"><span class="lbl">Difficulty</span><div class="seg" data-key="diff"><button>Kids</button><button>Easy</button><button>Normal</button><button>Hard</button></div></div>
       <div class="set"><span class="lbl">Sound</span><div class="seg" data-key="sound"><button>On</button><button>Off</button></div></div>
       <div class="set"><span class="lbl">Match Help</span><div class="seg" data-key="hints" aria-label="Control hints and coach tips"><button>On</button><button>Off</button></div></div>
-      <div class="set more" id="set-more" hidden><span class="lbl">Half Length</span><div class="seg" data-key="half"><button>2 Min</button><button>4 Min</button><button>6 Min</button></div></div>
-      <div class="set more" id="set-cam" hidden><span class="lbl">Camera</span><div class="seg" data-key="cam"><button>Top</button><button>Low</button><button>Mid</button><button>High</button></div></div>
-      <button class="btn more-btn" id="b-more" aria-expanded="false">More Settings</button>
     </div>
   </div>
 </section>
@@ -91,9 +108,11 @@
 <section class="screen" id="s-teams" hidden>
   <div class="wrap">
     <div class="head"><div><p class="eyebrow" id="t-eyebrow">Championship</p><h2 class="title" id="t-title">Pick Your Team</h2></div>
-      <div class="seg pool" data-key="pool"><button>International</button><button>Local</button><button>France</button><button>Australia</button><button>South Africa</button><button id="t-league" hidden>My League</button></div></div>
+      <div class="seg" data-key="womens" id="t-side"><button>Men's</button><button>Women's</button></div>
+      <div class="seg pool" data-key="pool"><button>International</button><button>Local</button><button>Counties</button><button>England</button><button>England 2</button><button>Ireland</button><button>Wales Scotland Italy</button><button>France</button><button>Australia</button><button>South Africa</button><button id="t-league" hidden>My League</button></div></div>
     <div class="yours" id="t-yours" hidden><span class="fx-team" id="t-mine"></span><button class="btn" id="t-change">Change Team</button></div>
     <button class="btn primary" id="t-default" hidden></button>
+    <p class="t-ratings" id="t-ratings" hidden></p>
     <div class="teams" id="t-grid"></div>
     <button class="btn" id="t-back" data-back>Back to Menu</button>
   </div>
@@ -103,12 +122,18 @@
   <div class="wrap">
     <div class="head"><div><p class="eyebrow" id="bd-eyebrow">Create Team</p><h2 class="title" id="bd-title">My Team</h2></div>
       <span class="preview" id="bd-jersey"></span></div>
-    <div class="bgrid">
+    <div class="bd-levels" id="bd-levels" hidden>
+      <p class="lbl" id="bd-levels-title">Choose a Level</p>
+      <div class="lv-grid" id="bd-level-grid"></div>
+    </div>
+    <div class="bgrid" id="bd-form">
       <div class="panel">
+        <div class="field bd-level"><span class="lbl">Level</span><span class="bd-level-now"><span class="lv-line"><span id="bd-level-name"></span><span id="bd-level-stars"></span></span><button class="btn" id="bd-level-change">Change Level</button></span><p class="stat-note" id="bd-level-note" role="status" hidden></p></div>
         <div class="names">
           <label class="field"><span class="lbl">Name</span><input class="inp" id="bd-name" maxlength="16" placeholder="My Team" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="done"></label>
           <label class="field"><span class="lbl">Short Name</span><input class="inp" id="bd-code" maxlength="3" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="done"></label>
         </div>
+        <div class="field"><span class="lbl">Team</span><div class="seg" id="bd-side"><button>Men's</button><button>Women's</button><button>Mixed</button></div></div>
         <div class="field"><span class="lbl">Pattern</span><div class="seg" id="bd-pat"><button>Plain</button><button>Hoops</button></div></div>
         <div class="field"><span class="lbl">Shirt</span><div class="swatches" id="bd-kit"></div></div>
         <div class="field"><span class="lbl">Trim</span><div class="swatches" id="bd-trim"></div></div>
@@ -118,7 +143,7 @@
       </div>
     </div>
     <button class="btn primary" id="bd-save">Save Team</button>
-    <div class="row2" id="bd-row"><button class="btn" id="bd-back" data-back>Back to Teams</button><button class="btn warn" id="bd-del">Delete Team</button></div>
+    <div class="row2" id="bd-row"><button class="btn" id="bd-level-keep" hidden>Keep This Level</button><button class="btn" id="bd-back" data-back>Back to Teams</button><button class="btn warn" id="bd-del">Delete Team</button></div>
   </div>
 </section>
 
@@ -131,6 +156,8 @@
     <p class="im-line" id="im-line" hidden>Paste a Pitchero or tournament link there.</p>
     <div class="im-paste" id="im-field"><input class="inp" id="im-url" type="url" inputmode="url" aria-labelledby="im-title" placeholder="https://" autocomplete="off" autocapitalize="none" spellcheck="false" enterkeyhint="go" maxlength="2048"><button class="btn" id="im-paste" hidden>Paste</button></div>
     <p class="im-err" id="im-err" role="alert" hidden></p>
+    <div class="ab im-level" id="im-level" hidden><span class="lbl" id="im-level-lbl">Level</span><button class="step" id="im-lv-down" aria-label="Lower Level">−</button><span class="im-lv-name lv-line"><span id="im-lv-name"></span><span id="im-lv-stars"></span></span><button class="step" id="im-lv-up" aria-label="Higher Level">+</button></div>
+    <p class="stat-note im-kept" id="im-kept" role="status" hidden></p>
     <div class="im-cols" id="im-cols" hidden>
       <div class="field"><span class="lbl">Shirt</span><div class="swatches" id="im-kit"></div></div>
       <div class="field"><span class="lbl">Trim</span><div class="swatches" id="im-trim"></div></div>
@@ -162,12 +189,24 @@
     <div class="cr-newgrid">
       <div class="field"><span class="lbl">Your Club</span><div class="cr-clubs" id="cn-clubs"></div></div>
       <div class="cr-form">
+        <div class="field"><span class="lbl">Player</span><div class="seg" id="cn-g"><button>Male</button><button>Female</button></div></div>
         <div class="cr-namerow"><label class="field"><span class="lbl">First Name</span><input class="inp" id="cn-name" maxlength="12" placeholder="Optional" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="done"></label><span id="cn-shirt"></span></div>
         <div class="field"><span class="lbl">Position</span><div class="seg" id="cn-pos"><button>Forward</button><button>Back</button></div></div>
         <div class="field"><span class="lbl">Shirt Number</span><div class="seg" id="cn-num"></div></div>
-        <button class="btn primary" id="cn-go">Start Career</button>
+      </div>
+      <div class="cr-form cr-look">
+        <div class="cr-lookhead">
+          <div class="cr-lookpick">
+            <div class="field"><span class="lbl">Build</span><div class="seg" id="cn-build"><button>Small</button><button>Medium</button><button>Big</button></div></div>
+          </div>
+          <canvas class="cr-lookshow" id="cn-look" width="126" height="158" aria-hidden="true" hidden></canvas>
+        </div>
+        <div class="field"><span class="lbl">Skin</span><div class="swatches" id="cn-skin"></div></div>
+        <div class="field"><span class="lbl">Hair Colour</span><div class="swatches" id="cn-hair"></div></div>
+        <div class="field"><span class="lbl">Hair Style</span><div class="seg cr-styles" id="cn-style"><button>Short</button><button>Shaved</button><button>Big Hair</button><button>Scrum Cap</button><button>Headband</button><button>Bun</button><button>Ponytail</button><button>Plait</button><button>Long Plait</button><button>Bunches</button><button>High Ponytail</button><button>Long Bob</button></div></div>
       </div>
     </div>
+    <button class="btn primary cr-go" id="cn-go">Start Career</button>
   </div>
 </section>
 
@@ -186,8 +225,9 @@
 
 <section class="screen" id="s-career-train" hidden>
   <div class="wrap">
-    <div class="head"><div><p class="eyebrow">Training</p><h2 class="title">Pick a Drill</h2></div></div>
+    <div class="head"><div><p class="eyebrow">Training</p><h2 class="title">Pick a Game</h2></div></div>
     <div class="cr-drills" id="ct-list"></div>
+    <p class="pr-coach" id="ct-coach" hidden>Learn Real Tackling With a Club Coach. Not One to Try at Home.</p>
     <button class="btn" id="ct-back" data-back>Back to Career</button>
   </div>
 </section>
@@ -218,24 +258,25 @@
     <div class="head"><div><p class="eyebrow">Controls</p><h2 class="title">How to Play</h2></div></div>
     <dl class="help">
       <dt>Stick</dt><dd>Touch anywhere on the left half and drag. Near a tackler, flick it sideways to <b>Side Step</b>. Pull it back and push on for a <b>Dummy</b>.</dd>
-      <dt>Pass</dt><dd>A tap goes to the teammate in the ring. White means he is free; the ring tints when a defender is on him. Tilt the stick toward a side. Passes can't go forward. Hold the button and the ring turns gold: the ball skips the nearest man and floats to the next one out. A tint inside the gold means that man is marked too.</dd>
+      <dt>Pass</dt><dd>A tap goes to the teammate in the ring. White means they are free; the ring tints when a defender is on them. Tilt the stick toward a side. Passes can't go forward. Hold the button and the ring turns gold: the ball skips the nearest player and floats to the next one out. A tint inside the gold means that player is marked too.</dd>
       <dt>Kick</dt><dd>Hold to power, release to kick. A tap is a chip.</dd>
       <dt>Goal Kicks</dt><dd>Steer the <b>arrow</b>. Hold <b>Kick</b>, let go in the gold.</dd>
       <dt>Drop Goal</dt><dd>In range the small button reads <b>Drop Goal</b>. Hold it, steer, let go in the gold before they reach you.</dd>
-      <dt>Tackle</dt><dd>When they have the ball. It lights up when you're close enough to dive. Miss and you're on the floor.</dd>
+      <dt>Tackle</dt><dd>When they have the ball. It lights up when you can reach them. Miss and you're on the floor.</dd>
       <dt>Sprint</dt><dd>Hold it for a burst of speed, with the ball or without. The ring drains while you hold and refills when you let go.</dd>
       <dt>Offload</dt><dd>Press Pass as you're tackled, when it glows.</dd>
-      <dt>Switch</dt><dd>The dashed ring shows who. Nearest the ball, or the next one if that is you. If your man is behind the ball, the nearest teammate still in front, and the button pulses.</dd>
-      <dt>Ruck</dt><dd>The ring moves to the teammate who will pick the ball up. Place him with the stick, or let go and he runs to the ball. Pass, Kick and Tackle stay dead until it is out.</dd>
-      <dt>Duels</dt><dd>Act on the <b>gold ring</b>: flick the stick to step, or press the button. In a Key Pass, <b>Dummy</b> when he drifts to your runner. Each one starts in slow motion.</dd>
+      <dt>Switch</dt><dd>The dashed ring shows who. Nearest the ball, or the next one if that is you. If your player is behind the ball, the nearest teammate still in front, and the button pulses.</dd>
+      <dt>Ruck</dt><dd>The ring moves to the teammate who will pick the ball up. Place them with the stick, or let go and they run to the ball. Pass, Kick and Tackle stay dead until it is out.</dd>
+      <dt>Duels</dt><dd>Act on the <b>gold ring</b>: flick the stick to step, or press the button. In a Key Pass, <b>Dummy</b> when they drift to your runner. Each one starts in slow motion.</dd>
       <dt>Hints</dt><dd>The card in the top corner names the control for each close-up. Untick <b>Hints</b> on it, or set <b>Match Help</b> to Off on the menu.</dd>
       <dt>Tutorial</dt><dd>The first time each close-up comes up, play pauses and a card says what to do. <b>Replay Tutorial</b> below shows them all again.</dd>
+      <dt>The Ball</dt><dd>A white bubble with a ball in it stands over whoever has the ball, on either side, and an arrow at the edge points to it when it is off the screen. On the grass, rays mean it is loose. In your first matches a sign under the clock says <b>Your Ball</b>, <b>Stop Them</b> or <b>Get the Ball</b>. In a career the <b>star</b> is your player and the <b>ring</b> is who you control now.</dd>
       <dt>Coach</dt><dd>The first time Pass, Tackle, an offload, Sprint or a side step comes up, one line tells you. The menu’s <b>Match Help</b> switch controls these tips and the control hints together.</dd>
-      <dt>Scrum</dt><dd>Press <b>Push</b> on the call of Set for a good hit, then tap it fast. Out-shove theirs to steal it.</dd>
+      <dt>Scrum</dt><dd>Press <b>Push</b> on the call of Set for a good start, then tap it fast. Out-shove theirs to steal it.</dd>
       <dt>Lineout</dt><dd>Press <b>Jump</b> so your jumper is at full height as the ball arrives. Beat theirs to steal the throw.</dd>
       <dt>Keyboard</dt><dd>Arrows or WASD to run: tap across near a tackler to <b>Side Step</b>, tap back for a <b>Dummy</b>. <b>J</b> Pass (hold for a long pass) / Offload / Tackle / Kick. <b>K</b> Kick / Switch / Drop Goal. <b>L</b> Sprint. <b>P</b> Pause.</dd>
       <dt class="desk-only">Controller</dt><dd class="desk-only">Stick or D-Pad to run: flick across near a tackler to <b>Side Step</b>, pull back and push on for a <b>Dummy</b>. <b>Bottom Button</b> Pass / Tackle. <b>Right Button</b> Kick / Switch. <b>Shoulder</b> Sprint. <b>Start</b> Pause. Press any button to connect it.</dd>
-      <dt class="desk-only">Two Player</dt><dd class="desk-only">Player 1: <b>W A S D</b> Run, <b>F</b> Pass, <b>G</b> Kick, <b>H</b> Sprint. Player 2: <b>Arrows</b> Run, <b>/</b> Pass, <b>.</b> Kick, <b>,</b> Sprint. Pass is also Tackle, the goal kick (hold it), Push and Jump; Kick is also Switch, Drop Goal and Dummy. A controller takes a seat with one press. In a duel the other player guards, drifts or steps with his run keys before the ring opens, or presses <b>Kick</b> for a Dummy as the passer.</dd>
+      <dt class="desk-only">Two Player</dt><dd class="desk-only">Player 1: <b>W A S D</b> Run, <b>F</b> Pass, <b>G</b> Kick, <b>H</b> Sprint. Player 2: <b>Arrows</b> Run, <b>/</b> Pass, <b>.</b> Kick, <b>,</b> Sprint. Pass is also Tackle, the goal kick (hold it), Push and Jump; Kick is also Switch, Drop Goal and Dummy. A controller takes a seat with one press. In a duel the other player guards, drifts or steps with their run keys before the ring opens, or presses <b>Kick</b> for a Dummy as the passer.</dd>
     </dl>
     <div class="scoring">
       <div><b>5</b><span>Try</span></div><div><b>2</b><span>Conversion</span></div><div><b>3</b><span>Penalty</span></div><div><b>3</b><span>Drop Goal</span></div>
@@ -287,7 +328,7 @@
   <div class="card">
     <p class="eyebrow" id="tu-eye">Tutorial</p>
     <h3 id="tu-title">Get Past</h3>
-    <p id="tu-text">Beat the Last Man</p>
+    <p id="tu-text">Beat the Last Defender</p>
     <div class="row2" id="tu-row"><button class="btn" id="tu-skip">Skip</button><button class="btn" id="tu-next">Next</button></div>
     <button class="btn primary" id="tu-play" hidden>Play</button>
   </div>
@@ -316,9 +357,9 @@
     <div id="pz-hints">
       <div class="set"><span class="lbl" id="pz-hl0">Hints</span><div class="seg" id="pz-h0"><button>On</button><button>Off</button></div></div>
       <div class="set" id="pz-hrow1" hidden><span class="lbl">Player 2 Hints</span><div class="seg" id="pz-h1"><button>On</button><button>Off</button></div></div>
-      <div class="set" id="pz-cam" hidden><span class="lbl">Camera</span><div class="seg" data-key="cam"><button>Top</button><button>Low</button><button>Mid</button><button>High</button></div></div>
     </div>
-    <button class="btn warn" id="pz-quit">Quit Match</button>
+    <p id="pz-cam-note" hidden>The Camera Changes After This Close-Up</p>
+    <div class="pz-foot"><button class="btn ico-btn" id="pz-cam" aria-label="Camera: Mid" hidden><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3.5L9 5.5h6L16.5 8H20a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg><span id="pz-cam-w">Mid</span></button><button class="btn warn" id="pz-quit">Quit Match</button></div>
   </div>
 </div>
 
@@ -333,23 +374,53 @@
 
 <section class="screen" id="s-practice" hidden>
   <div class="wrap">
-    <div class="head"><div><p class="eyebrow">Learn the Game</p><h2 class="title">Training Ground</h2></div></div>
+    <div class="head"><div><p class="eyebrow">Games</p><h2 class="title">Training Ground</h2></div></div>
+    <div id="pr-games">
     <div class="drills" id="pr-grid">
+      <button class="btn drill" id="pr-tag"><span class="dc-icon" id="pi-tag" aria-hidden="true"></span><span class="dc-name">Tag Chase</span></button>
       <button class="btn drill" id="pr-egg"><span class="dc-icon" id="pi-egg" aria-hidden="true"></span><span class="dc-name">Bouncy Egg</span></button>
       <button class="btn drill" id="pr-circle"><span class="dc-icon" id="pi-circle" aria-hidden="true"></span><span class="dc-name">Pass Around the Circle</span></button>
       <button class="btn drill" id="pr-cones"><span class="dc-icon" id="pi-cones" aria-hidden="true"></span><span class="dc-name">Cones</span></button>
-      <button class="btn drill" id="pr-tackle"><span class="dc-icon" id="pi-tackle" aria-hidden="true"></span><span class="dc-name">Tackling</span></button>
-      <button class="btn drill" id="pr-kick"><span class="dc-icon" id="pi-kick" aria-hidden="true"></span><span class="dc-name">Kicking</span></button>
-      <button class="btn drill" id="pr-scrum"><span class="dc-icon" id="pi-scrum" aria-hidden="true"></span><span class="dc-name">Driving</span></button>
-      <button class="btn drill" id="pr-defend"><span class="dc-icon" id="pi-defend" aria-hidden="true"></span><span class="dc-name">Defend a Breakaway</span></button>
       <button class="btn drill" id="pr-pass"><span class="dc-icon" id="pi-pass" aria-hidden="true"></span><span class="dc-name">Create a Two-on-One</span></button>
+      <button class="btn drill" id="pr-kick"><span class="dc-icon" id="pi-kick" aria-hidden="true"></span><span class="dc-name">Kicking</span></button>
+      <button class="btn drill" id="pr-defend"><span class="dc-icon" id="pi-defend" aria-hidden="true"></span><span class="dc-name">Defend a Breakaway</span></button>
     </div>
-    <button class="btn" id="pr-back" data-back>Back to Menu</button>
+    <div id="pr-contact">
+      <h3 class="pr-group">Contact Games (U9 and Up)</h3>
+      <p class="pr-coach">Learn Real Tackling With a Club Coach. Not One to Try at Home.</p>
+      <div class="drills">
+        <button class="btn drill" id="pr-tackle"><span class="dc-icon" id="pi-tackle" aria-hidden="true"></span><span class="dc-name">Tackling</span></button>
+        <button class="btn drill" id="pr-scrum"><span class="dc-icon" id="pi-scrum" aria-hidden="true"></span><span class="dc-name">Driving</span></button>
+        <button class="btn drill" id="pr-back"><span class="dc-icon" id="pi-back" aria-hidden="true"></span><span class="dc-name">Ball Back</span></button>
+      </div>
+    </div>
+    <div class="row2 pr-foot"><button class="btn" id="pr-grown">For Grown-Ups</button><button class="btn" id="pr-home" data-back>Back to Menu</button></div>
+    </div>
+    <div class="panel" id="pr-grownups" hidden>
+      <h3 class="pr-group">For Grown-Ups</h3>
+      <p>These are games first. Each one rewards a real habit, so children pick it up by playing. A short line after each run says what worked.</p>
+      <ul class="pr-builds">
+        <li><b>Tag Chase:</b> changing direction to get away, and pulling a tag off a hip with no contact. The youngest age groups play tag rugby.</li>
+        <li><b>Bouncy Egg:</b> going to meet the ball, with eyes on it until it arrives.</li>
+        <li><b>Pass Around the Circle:</b> passes that finish at chest height, where they are easiest to catch.</li>
+        <li><b>Cones:</b> footwork and clean changes of direction.</li>
+        <li><b>Create a Two-on-One:</b> running at a defender, then passing at the right moment.</li>
+        <li><b>Kicking:</b> aiming first, then a controlled strike.</li>
+        <li><b>Defend a Breakaway:</b> getting across to help when a team-mate is beaten. At the Kids level and in a career's Minis it ends with a tag, not a tackle.</li>
+        <li><b>Tackling:</b> head behind the ball carrier, eyes up, aiming low at the legs and well below the chest, arms round and legs driving.</li>
+        <li><b>Driving:</b> a low, strong body shape with the hips lower than the shoulders, and timing the push.</li>
+        <li><b>Ball Back:</b> a safe two-handed hold, falling without an arm out to stop the fall, and getting the ball back to the team.</li>
+      </ul>
+      <p>Contact starts at under-9 with the tackle only. Under-9s have no scrums and pass the ball on when tackled, so Driving and the placing in Ball Back go further than under-9s play. Real contact skills need a club coach and planned, supervised sessions. The Kids level and a career's Minis hide Contact Games, and only a grown-up can leave the Kids level. The game never asks for an age.</p>
+      <p><b>Head knocks:</b> if anyone may have a concussion, they stop playing straight away and see a doctor or call NHS 111 within a day. No sport for at least 24 hours, and no match for at least 21 days, with a phased return in between.</p>
+      <p class="pr-line">Coaching Tips Written Independently, in Line With Rugby Governing Body Guidance. Not Endorsed by Any Rugby Body. Not a Substitute for a Qualified Coach.</p>
+      <button class="btn" id="pr-grown-back" data-back>Back to Games</button>
+    </div>
   </div>
 </section>
 <div id="practice-cue" hidden aria-live="polite"><strong id="pr-objective"></strong><span id="pr-cue"></span></div>
 <div id="drill-hud" hidden><span id="dh-pips"></span><span id="dh-num" hidden></span><span id="dh-bar" hidden><i></i></span></div>
-<div id="drill-demo" hidden aria-live="polite"><strong id="demo-step"></strong><span id="demo-cap"></span></div>
+<div id="drill-demo" hidden aria-live="polite"><strong id="demo-step"></strong><span id="demo-cap"></span><em id="demo-coach" hidden>Learn Real Tackling With a Club Coach. Not One to Try at Home.</em></div>
 <button class="btn" id="demo-skip" hidden>Skip</button>
 <div class="modal" id="m-practice" hidden>
   <div class="card" role="dialog" aria-modal="true" aria-labelledby="pr-result">
@@ -357,10 +428,12 @@
     <div class="pr-title"><span class="dc-icon" id="pr-icon" aria-hidden="true"></span><h2 id="pr-result"></h2></div>
     <div class="pr-stars" id="pr-stars" role="img" aria-label="" hidden></div>
     <p id="pr-feedback"></p>
+    <p id="pr-tip" hidden></p>
+    <p class="pr-coach" id="pr-coach" hidden>Learn Real Tackling With a Club Coach. Not One to Try at Home.</p>
     <div class="stack">
       <div class="row2" id="pr-roles" hidden><button class="btn primary" id="pr-runner">Runner</button><button class="btn primary" id="pr-passer">Passer</button></div>
       <div class="row2" id="pr-go"><button class="btn primary" id="pr-retry">Try Again</button><button class="btn" id="pr-watch">Watch How</button></div>
-      <div class="row2" id="pr-row"><button class="btn" id="pr-next">Next Drill</button><button class="btn" id="pr-select" data-back>Back to Training</button></div>
+      <div class="row2" id="pr-row"><button class="btn" id="pr-next">Next Game</button><button class="btn" id="pr-select" data-back>Back to Games</button></div>
     </div>
   </div>
 </div>

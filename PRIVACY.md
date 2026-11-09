@@ -4,7 +4,7 @@ Try Line Rugby is made to be safe for children. It collects nothing about you or
 
 ## What the game keeps
 
-Settings, the teams you make, your championship, your Trophy Cabinet, your career (including the optional first name you give your player) and any league you import are saved on this device only: in the browser's storage under the name `tryline.v1`, or in the app's own storage. Anything you type, such as a team name, stays there too. None of it is sent anywhere. Deleting the app, or clearing the browser's data for the game's site, removes it.
+Settings, the teams you make, your championship, your Trophy Cabinet, your career (including the optional first name you give your player, your player's look and the Male or Female choice) and any league you import are saved on this device only: in the browser's storage under the name `tryline.v1`, or in the app's own storage. Anything you type, such as a team name, stays there too. None of it is sent anywhere. Deleting the app, or clearing the browser's data for the game's site, removes it.
 
 ## What the game does not do
 
@@ -17,6 +17,8 @@ Settings, the teams you make, your championship, your Trophy Cabinet, your caree
 ## Going online
 
 Once loaded, the game plays offline. When it is online it fetches only its own files, from the site it came from, to load and to update itself.
+
+The web version also reads one small file, `ratings.json`, when it starts and is online. It holds the national teams' ratings. It comes only from the game's own site, and nothing about the player is sent with the request. Offline, the game uses the last copy kept on the device and sends nothing. If it is missing or looks wrong, the game uses the ratings it already carries. The game never contacts a rankings service or any other third party for ratings.
 
 The web version also loads its two typefaces from Google Fonts. Google receives that request, as it does from any website that uses its fonts. The game adds nothing about you or your play to it.
 

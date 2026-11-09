@@ -20,10 +20,20 @@
 .dc-icon .seam{stroke:var(--flood-ink);stroke-width:1.4}
 .dc-icon .band{stroke:#62d680;stroke-width:4}
 .dc-name{display:block;text-wrap:balance}
+#pr-games{display:flex;flex-direction:column;gap:12px}
+#pr-contact{display:flex;flex-direction:column;gap:8px}
+.pr-group{margin:0;font:800 clamp(18px,3vw,22px)/1.05 var(--display);text-transform:uppercase;letter-spacing:.02em;color:var(--flood)}
+.pr-coach{margin:0;font:700 14px/1.25 var(--body);color:var(--chalk)}
+#pr-tip{color:var(--flood);font-weight:700}
+#pr-grownups{gap:10px;font-size:15px;line-height:1.35}
+.pr-builds{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:5px;color:var(--chalk-dim)}
+.pr-builds b,#pr-grownups p b{color:var(--chalk)}
+#s-practice .panel p.pr-line{color:var(--chalk);font-weight:700}
 @media (max-width:560px){.drills{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (orientation:landscape) and (max-height:420px){
   #s-practice .wrap{gap:12px}
   .btn.drill{min-height:76px;padding:6px;gap:4px;font-size:14px}
+  #pr-games{gap:10px}
   .dc-icon{width:32px;height:32px}
 }
 #m-practice .card{gap:12px}
@@ -62,6 +72,8 @@
 #drill-demo{position:fixed;z-index:7;top:calc(env(safe-area-inset-top,0px) + 6px);left:50%;transform:translateX(-50%);width:min(520px,62vw);padding:5px 12px 6px;border:1px solid var(--flood);border-radius:8px;background:rgba(11,19,14,.92);text-align:center;pointer-events:none}
 #drill-demo strong{display:block;font:800 13px/1.15 var(--body);letter-spacing:.06em;color:var(--flood)}
 #drill-demo span{display:block;font:700 16px/1.2 var(--body);color:var(--chalk)}
+#demo-coach{display:block;margin-top:2px;font:700 12px/1.15 var(--body);font-style:normal;color:var(--flood)}
+#demo-coach[hidden]{display:none}
 #demo-skip{position:fixed;z-index:8;top:calc(env(safe-area-inset-top,0px) + 6px);right:max(10px,env(safe-area-inset-right,0px));width:auto;min-width:72px;min-height:44px;padding:0 14px}
 #controls.demo #zone,#controls.demo .act{pointer-events:none}
 #controls.demo .act.idle{opacity:.7}
